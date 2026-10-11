@@ -31,25 +31,25 @@ function setup() {
   const sum = ensureSheet_(ss, 'summary', []);
   sum.clear();
   sum.getRange('A1').setValue('イベント別 件数（本番のみ）').setFontWeight('bold');
-  sum.getRange('A2').setFormula("=QUERY(logs!A2:L,\"select C, count(C) where B='production' and C<>'' group by C label C 'event', count(C) '件数'\",0)");
+  sum.getRange('A2').setFormula("=IFERROR(QUERY(logs!A2:L,\"select C, count(C) where B='production' and C<>'' group by C label C 'event', count(C) '件数'\",0),\"（まだデータがありません）\")");
 
   sum.getRange('D1').setValue('日別×イベント（本番のみ）').setFontWeight('bold');
-  sum.getRange('D2').setFormula("=QUERY({ARRAYFORMULA(IF(logs!A2:A=\"\",,INT(logs!A2:A))),logs!B2:C},\"select Col1, count(Col3) where Col2='production' and Col3<>'' group by Col1 pivot Col3 label Col1 '日付'\",0)");
+  sum.getRange('D2').setFormula("=IFERROR(QUERY({ARRAYFORMULA(IF(logs!A2:A=\"\",,INT(logs!A2:A))),logs!B2:C},\"select Col1, count(Col3) where Col2='production' and Col3<>'' group by Col1 pivot Col3 label Col1 '日付'\",0),\"（まだデータがありません）\")");
   sum.getRange('D3:D').setNumberFormat('yyyy/mm/dd');
 
   sum.getRange('A14').setValue('人気の地色（撮影時・本番）').setFontWeight('bold');
-  sum.getRange('A15').setFormula("=QUERY(logs!B2:F,\"select F, count(F) where B='production' and C='capture' group by F order by count(F) desc label F '地色', count(F) '回数'\",0)");
+  sum.getRange('A15').setFormula("=IFERROR(QUERY(logs!B2:F,\"select F, count(F) where B='production' and C='capture' group by F order by count(F) desc label F '地色', count(F) '回数'\",0),\"（まだデータがありません）\")");
 
   sum.getRange('D14').setValue('人気のキャラクター（撮影時・本番、6か所の合計）').setFontWeight('bold');
-  sum.getRange('D15').setFormula("=QUERY(FLATTEN(ARRAYFORMULA(IFERROR(SPLIT(FILTER(logs!G2:G,logs!B2:B=\"production\",logs!C2:C=\"capture\"),\"|\")))),\"select Col1, count(Col1) where Col1<>'' and Col1<>'-' group by Col1 order by count(Col1) desc label Col1 'キャラ', count(Col1) '回数'\",0)");
+  sum.getRange('D15').setFormula("=IFERROR(QUERY(FLATTEN(ARRAYFORMULA(IFERROR(SPLIT(FILTER(logs!G2:G,logs!B2:B=\"production\",logs!C2:C=\"capture\"),\"|\")))),\"select Col1, count(Col1) where Col1<>'' and Col1<>'-' group by Col1 order by count(Col1) desc label Col1 'キャラ', count(Col1) '回数'\",0),\"（まだデータがありません）\")");
 
   sum.getRange('G14').setValue('フレーム / 背景（撮影時・本番）').setFontWeight('bold');
-  sum.getRange('G15').setFormula("=QUERY(logs!B2:J,\"select I, J, count(I) where B='production' and C='capture' group by I, J label I 'フレーム', J '背景', count(I) '回数'\",0)");
+  sum.getRange('G15').setFormula("=IFERROR(QUERY(logs!B2:J,\"select I, J, count(I) where B='production' and C='capture' group by I, J label I 'フレーム', J '背景', count(I) '回数'\",0),\"（まだデータがありません）\")");
 
   sum.getRange('A40').setValue('ユニーク利用（本番・session数）').setFontWeight('bold');
-  sum.getRange('A41').setFormula("=COUNTUNIQUE(FILTER(logs!D2:D, logs!B2:B=\"production\"))");
+  sum.getRange('A41').setFormula("=IFERROR(ROWS(UNIQUE(FILTER(logs!D2:D, logs!B2:B=\"production\"))),0)");
   sum.getRange('D40').setValue('端末（本番・open）').setFontWeight('bold');
-  sum.getRange('D41').setFormula("=QUERY(logs!B2:E,\"select E, count(E) where B='production' and C='open' group by E label E '端末', count(E) '回数'\",0)");
+  sum.getRange('D41').setFormula("=IFERROR(QUERY(logs!B2:E,\"select E, count(E) where B='production' and C='open' group by E label E '端末', count(E) '回数'\",0),\"（まだデータがありません）\")");
 
   ss.getSheets().forEach(s => { if (s.getName() === 'シート1' || s.getName() === 'Sheet1') ss.deleteSheet(s); });
   Logger.log('Spreadsheet: https://docs.google.com/spreadsheets/d/' + ssId);
