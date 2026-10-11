@@ -67,8 +67,8 @@ const VARIANTS={
  cat:[V('red','赤い帽子',{G:CV.red}),V('blue','青い帽子',{G:CV.blue}),V('yellow','黄色の帽子',{G:CV.yellow}),V('white','白ねこ',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('black','黒ねこ',{CL:'#3A3436',CD:'#2A2527'})],
  reindeer:[V('white','白い動物たち',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('choco','茶色の動物たち',{CL:'#7A4E35',CD:'#5A3826'}),V('golden','金色の動物たち',{CL:'#E6BC55',CD:'#C08E2E'}),V('red','赤い鞍',{G:CV.red}),V('blue','青い鞍',{G:CV.blue})],
  boots:[V('red','赤のブーツ',{G:CV.red}),V('blue','青のブーツ',{G:CV.blue}),V('yellow','黄色のブーツ',{G:CV.yellow}),V('pink','ピンクのブーツ',{G:CV.pink}),V('gold','金のブーツ',{G:CV.gold})],
- pyramid_g:[V('red','赤い星',{G:CV.red}),V('blue','青い星',{G:CV.blue}),V('yellow','黄色の星',{G:CV.yellow}),V('white','白木',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('dark','くるみ材',{CL:'#8A5A35',CD:'#6A4226'})],
- pyramid_r:[V('green','緑の星',{R:CV.green}),V('blue','青い星',{R:CV.blue}),V('yellow','黄色の星',{R:CV.yellow}),V('white','白木',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('dark','くるみ材',{CL:'#8A5A35',CD:'#6A4226'})],
+ pyramid_g:[V('red','赤い星',{G:CV.red}),V('blue','青い星',{G:CV.blue}),V('purple','紫の星',{G:CV.purple}),V('white','白木',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('dark','くるみ材',{CL:'#8A5A35',CD:'#6A4226'})],
+ pyramid_r:[V('green','緑の星',{R:'#1F5A3A'}),V('blue','青い星',{R:CV.blue}),V('purple','紫の星',{R:CV.purple}),V('white','白木',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('dark','くるみ材',{CL:'#8A5A35',CD:'#6A4226'})],
  train:[V('blue','青い汽車',{R:CV.blue}),V('green','緑の汽車',{R:CV.green}),V('yellow','黄色の汽車',{R:CV.yellow}),V('pink','ピンクの汽車',{R:CV.pink}),V('red','赤い車体',{CL:CV.red,CD:'#8A1A26',R:CV.yellow})]};
 const getVar=(k,p)=>(p&&p!=='orig'&&VARIANTS[k]&&VARIANTS[k].find(v=>v.id===p))||V('orig','オリジナル',null);
 const varDots=(k,v)=>v.m?Object.values(v.m).slice(0,2):ORIGDOT[k];
@@ -111,11 +111,49 @@ function variant(k,p){ // recoloured figure (+ pixel sample + thumbnail), cached
   const im=IM[k],c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);
   const D=x.getImageData(0,0,c.width,c.height),d=D.data,tg={};
   for(const f in pat.m)tg[f]=hexRgb(pat.m[f]);
-  for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const r=d[i],g=d[i+1],b=d[i+2];
-    let best=null,bd=62;for(const f in KEYS){const q=KEYS[f],dd=Math.hypot(r-q[0],g-q[1],b-q[2]);if(dd<bd){bd=dd;best=f;}}
-    if(!best||!tg[best])continue;const q=KEYS[best],t=tg[best];
-    const lq=q[0]*.3+q[1]*.59+q[2]*.11,lp=r*.3+g*.59+b*.11,k2=lp/lq; // keep the original shading
-    d[i]=Math.min(255,t[0]*k2);d[i+1]=Math.min(255,t[1]*k2);d[i+2]=Math.min(255,t[2]*k2);}
+  // 1) which colour family each pixel belongs to (W = white details such as icing or eyes)
+  const W=c.width,H=c.height,N=W*H,FAM=Object.assign({},KEYS,{W:[250,250,248]}),FK=Object.keys(FAM),fam=new Int8Array(N).fill(-1);let opaque=0;
+  for(let p=0;p<N;p++){const i=p*4;if(d[i+3]<40)continue;opaque++;const r=d[i],g=d[i+1],b=d[i+2];
+    let best=-1,bd=62;FK.forEach((f,j)=>{const q=FAM[f],dd=Math.hypot(r-q[0],g-q[1],b-q[2]);if(dd<bd){bd=dd;best=j;}});fam[p]=best;}
+  const recol=(i,f)=>{const q=KEYS[f],t=tg[f],lq=q[0]*.3+q[1]*.59+q[2]*.11,lp=d[i]*.3+d[i+1]*.59+d[i+2]*.11,k2=lp/lq; // keep the original shading
+    return [Math.min(255,t[0]*k2),Math.min(255,t[1]*k2),Math.min(255,t[2]*k2)];};
+  // 2) split each family into connected parts; large parts (hats, clothes, bodies) take the new colour
+  const minArea=Math.max(90,opaque*.006),comp=new Int32Array(N).fill(-1),stack=new Int32Array(N),parts=[];
+  for(let p=0;p<N;p++){if(fam[p]<0||comp[p]>=0)continue;const f=fam[p],id=parts.length,list=[];let sp=0;stack[sp++]=p;comp[p]=id;
+    while(sp){const q=stack[--sp];list.push(q);const x0=q%W;
+      if(x0>0&&comp[q-1]<0&&fam[q-1]===f){comp[q-1]=id;stack[sp++]=q-1;}
+      if(x0<W-1&&comp[q+1]<0&&fam[q+1]===f){comp[q+1]=id;stack[sp++]=q+1;}
+      if(q>=W&&comp[q-W]<0&&fam[q-W]===f){comp[q-W]=id;stack[sp++]=q-W;}
+      if(q<N-W&&comp[q+W]<0&&fam[q+W]===f){comp[q+W]=id;stack[sp++]=q+W;}}
+    parts.push({f:FK[f],list,big:list.length>=minArea});}
+  const big=new Uint8Array(N),d0=new Uint8ClampedArray(d);
+  parts.forEach(pt=>{if(!pt.big||!tg[pt.f])return;pt.list.forEach(q=>{const i=q*4,v=recol(i,pt.f);d[i]=v[0];d[i+1]=v[1];d[i+2]=v[2];big[q]=1;});});
+  // 3) small parts (eyes, mouths, buttons, stars, icing): keep each one as readable as it is on the original artwork
+  const lin1=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);};
+  const relL=a=>.2126*lin1(a[0])+.7152*lin1(a[1])+.0722*lin1(a[2]);
+  const cr=(a,b)=>{const x=relL(a),y=relL(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+  const tune=(col,sur,target)=>{ // same hue, pushed darker (on light ground) or lighter (on dark ground) until it reads
+    const dark=relL(sur)>.25,to=dark?[62,38,28]:[255,248,236];for(let f=.1;f<=1.001;f+=.05){const v=col.map((c,j)=>c+(to[j]-c)*f);if(cr(v,sur)>=target)return v;}
+    return dark?[40,28,24]:[255,250,240];};
+  parts.forEach((pt,id)=>{if(pt.big&&!(pt.f==='W'&&pt.list.length<minArea*6))return;
+    const nb=new Map();let orr=0,og=0,ob=0;
+    for(const q of pt.list){const i=q*4;orr+=d0[i];og+=d0[i+1];ob+=d0[i+2];const x0=q%W;
+      for(const o of [-1,1,-W,W]){const n=q+o;if(n<0||n>=N||(o===-1&&x0===0)||(o===1&&x0===W-1))continue;const cid=comp[n];if(cid===id||cid<0)continue;
+        const j=n*4;let e=nb.get(cid);if(!e){e=[0,0,0,0,0,0,0];nb.set(cid,e);}e[0]+=d[j];e[1]+=d[j+1];e[2]+=d[j+2];e[3]++;e[4]+=d0[j];e[5]+=d0[j+1];e[6]+=d0[j+2];}}
+    if(!nb.size)return;let top=null;nb.forEach(e=>{if(!top||e[3]>top[3])top=e;});   // the area this part mostly sits on
+    const L=pt.list.length,sur=[top[0]/top[3],top[1]/top[3],top[2]/top[3]],sur0=[top[4]/top[3],top[5]/top[3],top[6]/top[3]],orig=[orr/L,og/L,ob/L];
+    const target=Math.min(1.8,cr(orig,sur0)*.9);      // how well it read on the original artwork
+    const paint=(fn)=>pt.list.forEach(q=>{const i=q*4,v=fn(i);d[i]=v[0];d[i+1]=v[1];d[i+2]=v[2];});
+    let cand=null;
+    if(tg[pt.f]){cand=[0,0,0];pt.list.forEach(q=>{const v=recol(q*4,pt.f);cand[0]+=v[0]/L;cand[1]+=v[1]/L;cand[2]+=v[2]/L;});
+      if(cr(cand,sur)>=target){paint(i=>recol(i,pt.f));return;}}
+    if(cr(orig,sur)>=target){paint(i=>[d0[i],d0[i+1],d0[i+2]]);return;}  // the original colour still reads well
+    const base=cand||orig,fixed=tune(base,sur,Math.max(target,2.6)),k=fixed.map((v,j)=>v-base[j]);
+    paint(i=>{const v=cand?recol(i,pt.f):[d0[i],d0[i+1],d0[i+2]];return v.map((c,j)=>Math.max(0,Math.min(255,c+k[j])));});});
+  // 4) soften anti-aliased edges next to recoloured areas
+  for(let p=0;p<N;p++){if(big[p]||d[p*4+3]===0||fam[p]>=0)continue;const x0=p%W;let nb=-1;
+    for(const o of [-1,1,-W,W]){const q=p+o;if(q<0||q>=N||(o===-1&&x0===0)||(o===1&&x0===W-1))continue;if(big[q]){nb=q;break;}}
+    if(nb<0)continue;const i=p*4,j=nb*4;for(let k=0;k<3;k++)d[i+k]=Math.round(d[i+k]*.45+d[j+k]*.55);}
   x.putImageData(D,0,0);
   const sc=document.createElement('canvas'),w=48,h=Math.round(48*c.height/c.width);sc.width=w;sc.height=h;const sx=sc.getContext('2d');sx.drawImage(c,0,0,w,h);
   const sd=sx.getImageData(0,0,w,h).data,px=[];for(let i=0;i<sd.length;i+=4)if(sd[i+3]>200)px.push([sd[i],sd[i+1],sd[i+2]]);
