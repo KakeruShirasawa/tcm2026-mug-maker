@@ -146,6 +146,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:1.5px solid var
 .dropzone{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#E9E4F2;font-size:13px;background:#1C2040}
 .dropzone label{border:1px solid rgba(233,228,242,.4);padding:14px 22px;cursor:pointer;letter-spacing:.06em}
 .dropzone input{display:none}
+.camalt{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}.camalt button{border:1px solid rgba(233,228,242,.5);color:#F3E8D2;padding:6px 12px;font-size:12px}
 .camnote{position:absolute;left:12px;right:12px;bottom:12px;background:rgba(20,24,47,.86);color:#E9E4F2;font-size:12.5px;padding:10px 12px;line-height:1.6}
 .ctrl{display:flex;flex-direction:column;gap:16px}
 .range{display:flex;flex-direction:column;gap:6px}

@@ -333,7 +333,7 @@ function refresh(){compose();refreshUI();}
 
 /* ------------------------------------------------------------------ step II: photo */
 const scene2=$('#scene'),layer=$('#mugLayer'),cam=$('#cam'),venueImg=$('#venueImg'),upImg=$('#upImg');
-let bgMode='venue',stream=null,lp={x:50,y:66,s:34};
+let bgMode='camera',stream=null,lp={x:50,y:66,s:34};
 function step(s){
   document.querySelectorAll('.steps button').forEach(b=>b.setAttribute('aria-selected',b.dataset.step===s));
   $('#design').hidden=s!=='design';$('#photo').hidden=s!=='photo';
@@ -344,7 +344,7 @@ function step(s){
 function placeLayer(){layer.style.left=lp.x+'%';layer.style.top=lp.y+'%';layer.style.width=lp.s+'%';resize();drawFrameLive();}
 document.querySelectorAll('.ptabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.ptabs button').forEach(x=>x.setAttribute('aria-selected',x===b));setBg(b.dataset.bg);});
 function setBg(m){
-  bgMode=m;stopCam();venueImg.hidden=m!=='venue';cam.hidden=m!=='camera';upImg.hidden=m!=='upload'||!upImg.src;
+  bgMode=m;document.querySelectorAll('.ptabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.bg===m));stopCam();venueImg.hidden=m!=='venue';cam.hidden=m!=='camera';upImg.hidden=m!=='upload'||!upImg.src;
   $('#dropzone').hidden=!(m==='upload'&&!upImg.getAttribute('src'));$('#camnote').hidden=true;
   scene2.classList.toggle('tall',m!=='venue'&&window.innerWidth<700);
   if(m==='venue'){lp={x:50,y:67,s:30};}else{lp={x:50,y:60,s:window.innerWidth<700?56:36};}
@@ -352,7 +352,9 @@ function setBg(m){
 }
 async function startCam(){
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});cam.srcObject=stream;await cam.play();}
-  catch(err){const n=$('#camnote');n.hidden=false;n.textContent='カメラを起動できませんでした。ブラウザの設定でカメラの利用を許可してください。カメラがないパソコンでは「会場の背景にかざる」をお使いください。';}
+  catch(err){const n=$('#camnote');n.hidden=false;
+    n.innerHTML='カメラを起動できませんでした。ブラウザの設定でカメラの利用を許可してください。カメラがない場合はこちらから選べます。<span class="camalt"><button data-go="upload">写真に合わせる</button><button data-go="venue">会場の背景に合わせる</button></span>';
+    n.querySelectorAll('button').forEach(b=>b.onclick=()=>setBg(b.dataset.go));}
 }
 function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
 $('#fileIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{upImg.src=r.result;upImg.hidden=false;$('#dropzone').hidden=true;};r.readAsDataURL(f);});
