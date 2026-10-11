@@ -1,0 +1,4 @@
+_src_*
+_gemini*
+Claude outputs/
+.DS_Store

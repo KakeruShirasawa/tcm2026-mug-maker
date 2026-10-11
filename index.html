@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>クリスマスマグカップメーカー｜東京クリスマスマーケット2026</title>
+<meta name="description" content="2026年の公式マグカップのキャラクターと36色の地色を組み合わせて、世界にひとつのクリスマスマグを。会場の背景やカメラでARフォトも撮れます。">
+<meta property="og:title" content="クリスマスマグカップメーカー｜東京クリスマスマーケット2026">
+<meta property="og:description" content="公式マグのキャラクターと色を自由に組み合わせて、オリジナルのクリスマスマグをつくろう。">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Shippori+Mincho+B1:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Kalam:wght@400&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="loader" id="loader"><div class="in"><i>Tokyo Christmas Market 2026</i><span>MUG MAKER</span><div class="bar"></div></div></div>
+
+<main class="landing" id="landing">
+  <section class="hero">
+    <canvas class="snow" id="snowC"></canvas>
+    <svg class="arch" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+      <defs><linearGradient id="gg" x1="0" x2="1"><stop offset="0" stop-color="#E9CF94"/><stop offset=".4" stop-color="#B98F4D"/><stop offset=".7" stop-color="#F2DDA6"/><stop offset="1" stop-color="#A97C3E"/></linearGradient></defs>
+      <path d="M0 96 C60 40 170 34 300 30 C340 28 352 18 360 4 C368 18 380 28 420 30 C550 34 660 40 720 96 C780 40 890 34 1020 30 C1060 28 1072 18 1080 4 C1088 18 1100 28 1140 30 C1270 34 1380 40 1440 96" fill="none" stroke="url(#gg)" stroke-width="2"/>
+      <g fill="#C9AC72"><circle cx="720" cy="100" r="2"/></g>
+    </svg>
+    <div class="hbar"><span class="ed">Tokyo Christmas Market 2026</span><a href="https://tokyochristmas.net/" target="_blank" rel="noopener">公式サイト</a></div>
+    <div class="hgrid">
+      <div class="hcopy">
+        <div class="eyebrow">Deine Tasse, deine Weihnacht.</div>
+        <h2>世界にひとつの、<br><em>クリスマスマグ</em>を。</h2>
+        <p class="name">クリスマスマグカップメーカー</p>
+        <p>2026年の公式マグカップに描かれたキャラクターと、36色の地色を自由に組み合わせて。できあがったマグは、会場の背景やスマホのカメラで記念写真にできます。</p>
+        <a class="start" href="#" id="startBtn">Start<span>マグをつくる</span></a>
+      </div>
+      <div class="hstage">
+        <div class="mugbox" id="heroMug"></div>
+        <div class="hcap"><span id="heroCap"></span><div class="dots" id="heroDots"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lsec">
+    <div class="lhead"><em>Mug Atelier</em><h3>キャラクターと色で、あなたらしい一杯に</h3></div>
+    <p class="lead">アーチの下に並ぶ6つの場所に、好きなキャラクターを置いてみましょう。サンタを緑にしたり、ジンジャーブレッドをいちご色にしたり。家族へのプレゼントのイメージや、推しの色のマグも作れます。</p>
+    <div class="gallery" id="gallery"></div>
+  </section>
+
+  <section class="lsec" style="padding-top:0">
+    <div class="lhead"><em>Drei Besonderheiten</em><h3>メーカーの3つのポイント</h3></div>
+    <div class="points">
+      <article class="point"><span class="no">Point 01</span><h4>36色の地色</h4><div class="vis"><div class="vchips" id="vchips"></div></div><p>公式のレッドとネイビーに加えて、パステルや深い冬の色まで。明るい色では雪や星の柄が自動で見やすい色に変わります。</p></article>
+      <article class="point"><span class="no">Point 02</span><h4>12のキャラクターと色違い</h4><div class="vis"><div class="vfigs" id="vfigs"></div></div><p>レッドとネイビー、2つのマグのキャラクターが全員集合。キャラクターごとに似合う色違いも選べます。</p></article>
+      <article class="point"><span class="no">Point 03</span><h4>ARフォトで記念に</h4><div class="vis"><div class="vframe"><canvas id="vframe" width="300" height="225"></canvas></div></div><p>カメラに映した景色や会場の背景にマグを置いて、フォトフレーム付きの写真に。360°回して好きな角度で撮れます。</p></article>
+    </div>
+  </section>
+
+  <section class="lsec" style="padding-top:0">
+    <div class="lhead"><em>So geht's</em><h3>つくりかた</h3></div>
+    <div class="steps3">
+      <div class="st3"><span class="n">1</span><div><b>デザインする</b><p>地色を選び、6つの場所にキャラクターを置いて色を整えます。</p></div></div>
+      <div class="st3"><span class="n">2</span><div><b>かざる</b><p>会場の背景、カメラ、手持ちの写真の中から選んでマグを置きます。</p></div></div>
+      <div class="st3"><span class="n">3</span><div><b>撮って、シェア</b><p>フォトフレームを付けて保存。SNSでシェアしてみてください。</p></div></div>
+    </div>
+  </section>
+
+  <section class="ctaband">
+    <em>Frohe Weihnachten</em>
+    <h3>あなたのマグを、つくってみよう</h3>
+    <a class="start" href="#" id="startBtn2">Start<span>マグをつくる</span></a>
+    <div class="share" id="shareLinks"></div>
+  </section>
+  <footer class="lfoot"><a href="#landing" id="toTop">ページ上部へ</a><span>東京クリスマスマーケット 2026　<a href="https://tokyochristmas.net/" target="_blank" rel="noopener">公式サイト</a></span></footer>
+</main>
+
+<div class="wrap" id="maker" hidden>
+  <header class="mast">
+    <button class="home" id="homeBtn" aria-label="トップページへ">
+      <div class="ed">Tokyo Christmas Market 2026</div>
+      <h1>クリスマスマグカップメーカー</h1>
+    </button>
+    <nav class="steps" role="tablist" aria-label="ステップ">
+      <button role="tab" aria-selected="true" data-step="design"><i>I</i><span>デザインする</span></button>
+      <button role="tab" aria-selected="false" data-step="photo"><i>II</i><span>かざって撮る</span></button>
+    </nav>
+  </header>
+
+  <!-- STEP I -->
+  <section class="atelier" id="design">
+    <div class="stage">
+      <div class="stagerow">
+      <div class="view" id="view">
+        <div class="loading" id="loading">Die Tasse wird vorbereitet…</div>
+        <span class="gname" id="gname"></span>
+        <span class="cap">Glühweintasse 0,2 L — Edition 2026</span>
+        <span class="hint">左右で回す・上下で傾ける ・ キャラをタップで選ぶ</span>
+        <div class="patbar" id="patbar"><div class="pbl" id="patname"></div><div class="pats" id="pats" role="group" aria-label="キャラの色"></div></div>
+      </div>
+      <div class="side" id="side" aria-label="地色"></div>
+      </div>
+      <div class="niches" id="niches" role="group" aria-label="キャラクターの位置"></div>
+    </div>
+
+    <aside class="sheet">
+      <div class="blk" id="colorBlk">
+        <div class="lbl"><b>地色</b><em>Glasur</em></div>
+        <div class="chips" id="chips"></div>
+        <div class="chipname" id="chipname"></div>
+      </div>
+      <div class="blk">
+        <div class="lbl"><b>キャラクター</b><em>Figuren</em></div>
+        <div class="slotsel"><span id="slotsel"></span><button class="clear" id="clearSlot">このスペースを空ける</button></div>
+        <div class="figs" id="figs"></div>
+        <p class="note" id="contrastNote">地色と同じ系統の色のキャラには、自動で縁取りが付いて見やすくなります。</p>
+      </div>
+      <div class="blk">
+        <div class="lbl"><b>公式デザインに戻す</b><em>Original</em></div>
+        <div class="presets">
+          <button class="preset" data-preset="red"><i style="background:#AE1329"></i>レッドのマグ</button>
+          <button class="preset" data-preset="navy"><i style="background:#323696"></i>ネイビーのマグ</button>
+        </div>
+      </div>
+      <button class="cta" id="toPhoto">かざって撮る <small>weiter</small></button>
+    </aside>
+  </section>
+
+  <!-- STEP II -->
+  <section class="photo" id="photo" hidden>
+    <div class="ptabs" role="tablist" aria-label="背景">
+      <button role="tab" aria-selected="true" data-bg="venue">会場の背景にかざる</button>
+      <button role="tab" aria-selected="false" data-bg="camera">カメラで撮る</button>
+      <button role="tab" aria-selected="false" data-bg="upload">写真を使う</button>
+    </div>
+    <div class="photogrid">
+      <div class="scene" id="scene">
+        <img id="venueImg" alt="東京クリスマスマーケットの会場イメージ">
+        <video id="cam" playsinline muted hidden></video>
+        <img id="upImg" alt="" hidden>
+        <div class="dropzone" id="dropzone" hidden><label for="fileIn">写真を選ぶ<input type="file" id="fileIn" accept="image/*"></label></div>
+        <div class="mugLayer" id="mugLayer"></div>
+        <canvas class="framec" id="frameC"></canvas>
+        <div class="camnote" id="camnote" hidden></div>
+      </div>
+      <div class="ctrl">
+        <div class="range"><label for="rSize">マグの大きさ <em>Größe</em></label><input type="range" id="rSize" min="14" max="80" value="34"></div>
+        <div class="range"><label for="rTurn">マグの向き（360°） <em>Drehen</em></label><input type="range" id="rTurn" min="-180" max="180" value="0"></div>
+        <div class="range"><label for="rTilt">見る角度 <em>Neigung</em></label><input type="range" id="rTilt" min="-20" max="75" value="12"></div>
+        <div class="range"><label>フォトフレーム <em>Rahmen</em></label><div class="frames" id="frames">
+          <button data-f="arch" aria-pressed="true">アーチ</button><button data-f="snow" aria-pressed="false">雪とロゴ</button><button data-f="none" aria-pressed="false">なし</button></div></div>
+        <p class="note" style="margin:0" id="photoHint">マグはドラッグで好きな場所に動かせます。</p>
+        <button class="cta" id="shoot">この写真を作る <small>Foto</small></button>
+        <button class="ghost" id="back">デザインに戻る</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span><i>Tokyo Christmas Market 2026</i>　公式コンテンツ（テスト版）</span>
+    <span>マグのデザインは2026年の公式マグカップを元にしています</span>
+  </footer>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="mcard">
+    <div class="ed">Frohe Weihnachten</div>
+    <h3 id="mTitle">あなたのマグができあがりました</h3>
+    <img id="resultImg" alt="完成したマグの写真">
+    <p id="saveNote">画像を長押し（パソコンは右クリック）すると保存できます。</p>
+    <div class="row">
+      <a class="cta" id="dl" download="tokyo-christmas-market-2026-mug.png" href="#">画像を保存する</a>
+      <button class="ghost" id="share">シェアする</button>
+      <button class="ghost" id="mClose">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="config.js"></script>
+<script src="assets/data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
