@@ -254,3 +254,5 @@ input[type=range]{width:100%;accent-color:var(--ink)}
 #holdBtn[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
 #cam.mirror{transform:scaleX(-1)}
 .camc{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.camc.mirror{transform:scaleX(-1)}
+.guide{position:absolute;right:6%;top:50%;height:46%;transform:translateY(-50%);pointer-events:none;opacity:.9;animation:gpulse 1.8s ease-in-out infinite}.guide.mirror{transform:translateY(-50%) scaleX(-1)}@keyframes gpulse{50%{opacity:.45}}
+.scene>img.guide{inset:auto;right:6%;top:50%;width:auto;height:46%;object-fit:contain}

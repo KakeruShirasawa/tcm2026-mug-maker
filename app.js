@@ -450,7 +450,7 @@ function setBg(m){
 }
 async function startCam(){
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:1280},height:{ideal:720}},audio:false});cam.srcObject=stream;
-    const st=stream.getVideoTracks()[0].getSettings&&stream.getVideoTracks()[0].getSettings();mirror=facing==='user'&&(!st||!st.facingMode||st.facingMode==='user');cam.classList.toggle('mirror',mirror);$('#camC').classList.toggle('mirror',mirror);
+    const st=stream.getVideoTracks()[0].getSettings&&stream.getVideoTracks()[0].getSettings();mirror=facing==='user'&&(!st||!st.facingMode||st.facingMode==='user');cam.classList.toggle('mirror',mirror);$('#camC').classList.toggle('mirror',mirror);$('#guide').classList.toggle('mirror',mirror);
     await cam.play();if(holdOn)holdLoop();}
   catch(err){const n=$('#camnote');n.hidden=false;
     n.innerHTML='カメラを起動できませんでした。ブラウザの設定でカメラの利用を許可してください。カメラがない場合はこちらから選べます。<span class="camalt"><button data-go="upload">写真に合わせる</button></span>';
@@ -518,12 +518,12 @@ function showDiag(){$('#holdDiag').textContent=`認識 ${diag.n}回 / 検出 ${d
 function holdNote(t){$('#holdNote').textContent=t;}
 async function setHold(on){
   holdOn=on;const b=$('#holdBtn');b.setAttribute('aria-pressed',on);b.textContent=on?'手で持つをやめる':'手で持つ';
-  if(!on){lp.rot=0;hs=null;HT=HC=HV=LT=LC=null;camC.hidden=true;shadow.visible=!$('#photo').hidden;handC.getContext('2d').clearRect(0,0,handC.width,handC.height);
+  if(!on){lp.rot=0;hs=null;HT=HC=HV=LT=LC=null;camC.hidden=true;gripOn=false;gripN=loseN=0;layer.style.visibility='visible';$('#guide').hidden=true;shadow.visible=!$('#photo').hidden;handC.getContext('2d').clearRect(0,0,handC.width,handC.height);
     if(!$('#photo').hidden){lp={x:50,y:62,s:window.innerWidth<700?56:36};$('#rSize').value=lp.s;targetY=-2*Math.PI*0.72;placeLayer();}
     holdNote('');return;}
-  shadow.visible=false;seen=false;holdNote('準備しています…');
+  shadow.visible=false;seen=false;layer.style.visibility='hidden';$('#guide').hidden=false;holdNote('準備しています…');
   try{await loadHands();}catch(e){holdNote('手の認識を読み込めませんでした。通信状況をご確認ください。');return setHold(false);}
-  if(!holdOn)return;holdNote('マグの持ち手を握るように、カメラに手をかざしてください。');holdLoop();
+  if(!holdOn)return;setGrip(false);holdLoop();
 }
 let hp=0,HT=null,HC=null,HV=null,LT=null,LC=null,lastF=0;   // hand targets (from the detector) and the smoothed values drawn every frame
 function holdLoop(){if(looping)return;looping=true;
@@ -539,8 +539,10 @@ function holdLoop(){if(looping)return;looping=true;
     const L=res&&res.landmarks&&res.landmarks[0];
     if(!L){if(miss===60&&!diag.hits){loadHands(true).then(()=>{miss=0;}).catch(()=>{});}   // nothing at all yet: try the other way of running the detector
       if(miss>=5)camC.hidden=true;   /* lost the hand for a moment: show the live camera again */
-      if(++miss===10){LT=LC=null;handC.getContext('2d').clearRect(0,0,handC.width,handC.height);holdNote('手が見つかりません。手全体がカメラに映るようにしてください。');}return;}
-    diag.hits++;if(miss>=10||!seen){seen=true;holdNote('持てました。手を動かすとマグもついてきます。');}miss=0;camX.drawImage(snapC,0,0);camC.hidden=false;applyHand(L);holdRender();};
+      if(++miss===10){LT=LC=null;gripN=0;if(gripOn)setGrip(false);handC.getContext('2d').clearRect(0,0,handC.width,handC.height);holdNote('手が見つかりません。ガイドの形で、手全体がカメラに映るようにしてください。');}return;}
+    diag.hits++;seen=true;miss=0;camX.drawImage(snapC,0,0);camC.hidden=false;
+    if(isGrip(L)){loseN=0;if(!gripOn&&++gripN>=2)setGrip(true);}else{gripN=0;if(gripOn&&++loseN>=8)setGrip(false);}
+    applyHand(L);holdRender();};
   requestAnimationFrame(step);}
 const camC=$('#camC'),camX=camC.getContext('2d'),snapC=document.createElement('canvas'),snapX=snapC.getContext('2d'),_v=new THREE.Vector3(),detC=document.createElement('canvas'),detX=detC.getContext('2d',{willReadFrequently:true});
 function proj(x,y,z){_v.set(x,y,z).applyMatrix4(mug.matrixWorld).project(camera);return {x:_v.x*.5,y:-_v.y*.5};} // offset from layer centre, in layer widths
@@ -584,15 +586,47 @@ function holdRender(){
     push=Math.min(push,HC.span*.9);hp=hp+(push-hp)*.5;cx+=ax*hp;cy+=ay*hp;}
   lp.x=cx/m.W*100;lp.y=cy/m.H*100;lp.s=base/m.W*100;lp.rot=HC.rot;lp.sc=sc;
   layer.style.left=lp.x+'%';layer.style.top=lp.y+'%';layer.style.transform=`translate(-50%,-50%) rotate(${HC.rot}rad) scale(${sc})`;
-  // fingers in front of the handle: cut them out of the live camera picture and lay them over the mug
-  if(!LC)return;const d=handC.width/m.W,x=handC.getContext('2d');x.clearRect(0,0,handC.width,handC.height);x.save();x.scale(d,d);
-  x.lineCap='round';x.lineJoin='round';x.strokeStyle='#000';x.fillStyle='#000';
-  x.beginPath();[0,1,2,5,9,13,17].forEach((i,j)=>{const q=LC[i];j?x.lineTo(q.x,q.y):x.moveTo(q.x,q.y);});x.closePath();x.fill();x.lineWidth=HC.span*.25;x.stroke();   // palm
-  [[[1,2,3,4],.3],[[5,6,7,8],.3],[[9,10,11,12],.3],[[13,14,15,16],.28],[[17,18,19,20],.25]].forEach(([ch,wd])=>{x.lineWidth=HC.span*wd;x.beginPath();
-    ch.forEach((i,j)=>{const q=LC[i];j?x.lineTo(q.x,q.y):x.moveTo(q.x,q.y);});x.stroke();});
-  x.globalCompositeOperation='source-in';if(mirror){x.translate(m.W,0);x.scale(-1,1);}x.drawImage(camC,m.ox,m.oy,m.vw*m.s,m.vh*m.s);x.restore();
+  // the hand in front of the handle: its real outline, cut out of the same camera frame and laid over the mug
+  if(!LC)return;const d=handC.width/m.W,x=handC.getContext('2d');x.clearRect(0,0,handC.width,handC.height);
+  if(layer.style.visibility==='hidden')return;
+  const mk=handMask(m);x.save();x.imageSmoothingEnabled=true;x.drawImage(mk,0,0,handC.width,handC.height);
+  x.globalCompositeOperation='source-in';x.scale(d,d);if(mirror){x.translate(m.W,0);x.scale(-1,1);}x.drawImage(camC,m.ox,m.oy,m.vw*m.s,m.vh*m.s);x.restore();
   if(DEBUG){x.save();x.scale(d,d);x.fillStyle='#0f0';LC.forEach(q=>x.fillRect(q.x-3,q.y-3,6,6));x.restore();}
 }
+/* hand outline = (generous area around the tracked joints) ∩ (pixels with the hand's own skin colour), plus a thin core along each finger */
+const mkC=document.createElement('canvas'),mkX=mkC.getContext('2d',{willReadFrequently:true}),pxC=document.createElement('canvas'),pxX=pxC.getContext('2d',{willReadFrequently:true});
+function handMask(m){
+  const W=Math.round(m.W),H=Math.round(m.H);if(mkC.width!==W||mkC.height!==H){mkC.width=pxC.width=W;mkC.height=pxC.height=H;}
+  const sp=HC.span,path=(ctx,wPalm,wF)=>{ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();[0,1,2,5,9,13,17].forEach((i,j)=>{const q=LC[i];j?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);});ctx.closePath();ctx.fill();
+    ctx.lineWidth=sp*wPalm;ctx.stroke();[[1,2,3,4],[5,6,7,8],[9,10,11,12],[13,14,15,16],[17,18,19,20]].forEach(ch=>{ctx.lineWidth=sp*wF;ctx.beginPath();ch.forEach((i,j)=>{const q=LC[i];j?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);});ctx.stroke();});};
+  // generous area
+  mkX.globalCompositeOperation='source-over';mkX.clearRect(0,0,W,H);mkX.fillStyle=mkX.strokeStyle='#fff';path(mkX,.55,.55);
+  let x0=W,y0=H,x1=0,y1=0;LC.forEach(q=>{x0=Math.min(x0,q.x);y0=Math.min(y0,q.y);x1=Math.max(x1,q.x);y1=Math.max(y1,q.y);});
+  x0=Math.max(0,Math.floor(x0-sp*.6));y0=Math.max(0,Math.floor(y0-sp*.6));x1=Math.min(W,Math.ceil(x1+sp*.6));y1=Math.min(H,Math.ceil(y1+sp*.6));
+  const bw=x1-x0,bh=y1-y0;if(bw<4||bh<4)return mkC;
+  // camera pixels, positioned exactly as on screen
+  pxX.save();pxX.clearRect(0,0,W,H);if(mirror){pxX.translate(W,0);pxX.scale(-1,1);}pxX.drawImage(camC,m.ox,m.oy,m.vw*m.s,m.vh*m.s);pxX.restore();
+  const px=pxX.getImageData(x0,y0,bw,bh).data,mkD=mkX.getImageData(x0,y0,bw,bh),md=mkD.data;
+  const crcb=(r,g,b)=>{const Y=.299*r+.587*g+.114*b;return [(r-Y)*.713,(b-Y)*.564];};
+  // skin reference from points that are surely on the hand
+  const refs=[[0,9],[5,9],[9,13],[5,6],[9,10],[13,14],[0,5],[0,17]].map(([a,b])=>({x:(LC[a].x+LC[b].x)/2-x0,y:(LC[a].y+LC[b].y)/2-y0}));
+  let sr=0,sb=0,n=0;const smp=[];refs.forEach(q=>{for(let dy=-2;dy<=2;dy+=2)for(let dx=-2;dx<=2;dx+=2){const X=Math.round(q.x+dx),Y=Math.round(q.y+dy);if(X<0||Y<0||X>=bw||Y>=bh)continue;
+    const i=(Y*bw+X)*4,c=crcb(px[i],px[i+1],px[i+2]);smp.push(c);sr+=c[0];sb+=c[1];n++;}});
+  if(!n)return mkC;sr/=n;sb/=n;let v=0;smp.forEach(c=>v+=(c[0]-sr)**2+(c[1]-sb)**2);const tol=Math.max(7,Math.min(18,Math.sqrt(v/n)*2.2));
+  for(let i=0;i<md.length;i+=4){if(!md[i+3])continue;const c=crcb(px[i],px[i+1],px[i+2]),dd=Math.hypot(c[0]-sr,c[1]-sb)/tol;
+    md[i+3]=Math.round(md[i+3]*Math.max(0,Math.min(1,1.7-dd)));}
+  mkX.putImageData(mkD,x0,y0);
+  // thin core so the fingers never vanish where the colour test is unsure
+  mkX.fillStyle=mkX.strokeStyle='#fff';path(mkX,.1,.17);
+  return mkC;
+}
+/* pose guide: show the grip to make; the mug appears once the hand is closed around the handle */
+let gripN=0,loseN=0,gripOn=false;
+function isGrip(L){const vw=cam.videoWidth||1,vh=cam.videoHeight||1,D=(a,b)=>Math.hypot((L[a].x-L[b].x)*vw,(L[a].y-L[b].y)*vh);
+  let c=0;[[8,6],[12,10],[16,14],[20,18]].forEach(([t,pp])=>{if(D(t,0)<D(pp,0)*1.08)c++;});return c>=3;}
+function setGrip(on){gripOn=on;layer.style.visibility=on?'visible':'hidden';$('#guide').hidden=on||!holding();
+  if(!on)handC.getContext('2d').clearRect(0,0,handC.width,handC.height);
+  holdNote(on?'持てました。手を動かすとマグもついてきます。':'ガイドのように、手の甲をカメラに向けて軽く握ってください。');}
 $('#holdBtn').onclick=()=>setHold(!holdOn);
 document.querySelectorAll('#camSw button').forEach(b=>b.onclick=()=>{if(facing===b.dataset.cam)return;facing=b.dataset.cam;
   document.querySelectorAll('#camSw button').forEach(x=>x.setAttribute('aria-pressed',x===b));hs=null;HT=HC=LT=LC=null;camC.hidden=true;if(bgMode==='camera'){stopCam();startCam();}});
@@ -752,7 +786,7 @@ $('#toTop').onclick=e=>{e.preventDefault();window.scrollTo({top:0,behavior:'smoo
 
 /* ------------------------------------------------------------------ boot */
 (async function(){
-  buildUI();await loadAll();
+  $('#guide').src=A.guide;buildUI();await loadAll();
   try{await document.fonts.load('46px Kalam');await document.fonts.load('600 30px "Shippori Mincho B1"','東京クリスマスマーケット2026');}catch(e){}
   drawInner();splitLayers();initThree();compose();refreshUI();
   const mq=window.matchMedia('(max-width:600px)'),chips=$('#chips'),cb=$('#colorBlk');
