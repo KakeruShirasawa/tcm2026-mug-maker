@@ -445,7 +445,7 @@ function setBg(m){
   bgMode=m;document.querySelectorAll('.ptabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.bg===m));stopCam();cam.hidden=m!=='camera';$('#camC').hidden=true;upImg.hidden=m!=='upload'||!upImg.src;
   $('#dropzone').hidden=!(m==='upload'&&!upImg.getAttribute('src'));$('#camnote').hidden=true;
   lp={x:50,y:62,s:window.innerWidth<700?56:36};fitScene();
-  $('#holdRow').hidden=m!=='camera';$('#camRow').hidden=m!=='camera';if(m!=='camera')setHold(false);
+  $('#camui').hidden=m!=='camera';if(m!=='camera')setHold(false);
   $('#rSize').value=lp.s;placeLayer();if(m==='camera')startCam();
 }
 async function startCam(){
@@ -500,7 +500,7 @@ let turn0=0;$('#rTurn').addEventListener('input',e=>{rotY=-2*Math.PI*0.72+(+e.ta
 /* ---- ARフォト「手で持つ」: track the hand in the camera image (MediaPipe Hand Landmarker) and hang the mug's handle in it ---- */
 const handC=$('#handC'),MP='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21',IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),
   HAND_MODELS=['assets/hand_landmarker.task','https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'];
-let lastRun=0,seen=false,holdOn=false,hl=null,hlLoading=null,lastVT=-1,miss=0,hs=null,side=1,sideVote=0,looping=false;
+let lastRun=0,seen=false,holdOn=false,hl=null,hlLoading=null,lastVT=-1,miss=0,hs=null,side=1,natSide=1,bodyOff=0,sideVote=0,looping=false;
 const holding=()=>holdOn&&bgMode==='camera';
 let hlOrder=null,hlIdx=0,diag={n:0,err:'',dl:'',hits:0};
 async function loadHands(next){if(hl&&!next)return hl;if(hlLoading)return hlLoading;
@@ -514,10 +514,10 @@ async function loadHands(next){if(hl&&!next)return hl;if(hlLoading)return hlLoad
     throw new Error('hand model');})();
   try{return await hlLoading;}finally{hlLoading=null;}}
 const DEBUG=/[?&]debug/.test(location.search);
-function showDiag(){$('#holdDiag').textContent=`認識 ${diag.n}回 / 検出 ${diag.hits} / ${Math.round(diag.ms||0)}ms / 映像 ${cam.videoWidth}×${cam.videoHeight} / ${diag.dl}${diag.err?' / '+diag.err:''}`;}
-function holdNote(t){$('#holdNote').textContent=t;}
+function showDiag(){if(!DEBUG)return;$('#holdDiag').textContent=`認識 ${diag.n}回 / 検出 ${diag.hits} / ${Math.round(diag.ms||0)}ms / 映像 ${cam.videoWidth}×${cam.videoHeight} / ${diag.dl}${diag.err?' / '+diag.err:''}`;}
+function holdNote(t){const n=$('#holdNote');n.textContent=t;n.hidden=!t;}
 async function setHold(on){
-  holdOn=on;const b=$('#holdBtn');b.setAttribute('aria-pressed',on);b.textContent=on?'手で持つをやめる':'手で持つ';
+  holdOn=on;const b=$('#cuHold');b.setAttribute('aria-pressed',on);b.querySelector('span').textContent=on?'持つ中':'手で持つ';
   if(!on){lp.rot=0;hs=null;HT=HC=HV=LT=LC=null;camC.hidden=true;gripOn=false;gripN=loseN=0;layer.style.visibility='visible';$('#guide').hidden=true;shadow.visible=!$('#photo').hidden;handC.getContext('2d').clearRect(0,0,handC.width,handC.height);
     if(!$('#photo').hidden){lp={x:50,y:62,s:window.innerWidth<700?56:36};$('#rSize').value=lp.s;targetY=-2*Math.PI*0.72;placeLayer();}
     holdNote('');return;}
@@ -556,7 +556,11 @@ function applyHand(L){   // detector result → targets only (drawing happens in
   const rot=Math.max(-.45,Math.min(.45,Math.atan2(ux,-uy)));   // a held mug stays mostly upright
   const palm=avg([0,0,5,9,13,17]),gx=mcp.x*.45+pip.x*.55,gy=mcp.y*.45+pip.y*.55;
   const sd=((gx-palm.x)*(-uy)+(gy-palm.y)*ux)<0?-1:1;   // the cup sits on the far side of the fingers, away from the palm
-  if(sd!==side){if(++sideVote>6){side=sd;sideVote=0;}}else sideVote=0;
+  if(sd!==natSide){if(++sideVote>6){natSide=sd;sideVote=0;}}else sideVote=0;
+  // near the edge of the picture, hang the cup on the other side of the hand so it stays in view
+  const room=bodyOff||HC&&HC.span*1.6||120,W=vmap().W,want=nx=>nx>W*.1&&nx<W*.9;
+  side=want(gx+natSide*room)||!want(gx-natSide*room)?natSide:-natSide;
+  if(side!==natSide&&want(gx+natSide*(room+W*.04)))side=natSide;
   targetY=side>0?-Math.PI/2:Math.PI/2;   // handle toward the hand, the cup on the other side
   const nx=gx,ny=gy;
   // tiny wobble filter only (big moves pass straight through, so the mug stays on the hand)
@@ -575,7 +579,7 @@ function holdRender(){
   const per=Math.max(.02,Math.hypot(top.x-bot.x,top.y-bot.y));            // handle opening height per layer width
   const lw=Math.max(60,Math.min(m.W*1.8,.82*HC.span/per)),sc=lw/base;
   const c=Math.cos(HC.rot),sn=Math.sin(HC.rot),dx=mid.x*lw,dy=mid.y*lw;
-  let cx=HC.x-(dx*c-dy*sn),cy=HC.y-(dx*sn+dy*c);
+  let cx=HC.x-(dx*c-dy*sn),cy=HC.y-(dx*sn+dy*c);bodyOff=Math.abs(cx-HC.x);
   // keep the cup's body out of the hand: if any part of the hand reaches past the body's near edge, slide the mug outward
   if(LC){const ax=side*c,ay=side*sn,ux=sn,uy=-c;                      // across (toward the body) and up, on screen
     const lc=v=>{const X=v.x*c-v.y*sn,Y=v.x*sn+v.y*c;return {x:X*lw,y:Y*lw};};
@@ -623,13 +627,14 @@ function handMask(m){
 /* pose guide: show the grip to make; the mug appears once the hand is closed around the handle */
 let gripN=0,loseN=0,gripOn=false;
 function isGrip(L){const vw=cam.videoWidth||1,vh=cam.videoHeight||1,D=(a,b)=>Math.hypot((L[a].x-L[b].x)*vw,(L[a].y-L[b].y)*vh);
-  let c=0;[[8,6],[12,10],[16,14],[20,18]].forEach(([t,pp])=>{if(D(t,0)<D(pp,0)*1.08)c++;});return c>=3;}
+  let c=0;[[8,6],[12,10],[16,14],[20,18]].forEach(([t,pp])=>{if(D(t,0)<D(pp,0)*1.15)c++;});return c>=3;}
 function setGrip(on){gripOn=on;layer.style.visibility=on?'visible':'hidden';$('#guide').hidden=on||!holding();
   if(!on)handC.getContext('2d').clearRect(0,0,handC.width,handC.height);
   holdNote(on?'持てました。手を動かすとマグもついてきます。':'ガイドのように、手の甲をカメラに向けて軽く握ってください。');}
-$('#holdBtn').onclick=()=>setHold(!holdOn);
-document.querySelectorAll('#camSw button').forEach(b=>b.onclick=()=>{if(facing===b.dataset.cam)return;facing=b.dataset.cam;
-  document.querySelectorAll('#camSw button').forEach(x=>x.setAttribute('aria-pressed',x===b));hs=null;HT=HC=LT=LC=null;camC.hidden=true;if(bgMode==='camera'){stopCam();startCam();}});
+$('#cuHold').onclick=()=>setHold(!holdOn);
+$('#cuShoot').onclick=()=>$('#shoot').click();
+$('#cuFlip').onclick=()=>{facing=facing==='user'?'environment':'user';
+  $('#cuFlip span').textContent=facing==='user'?'外カメラ':'自撮り';hs=null;HT=HC=LT=LC=null;camC.hidden=true;if(bgMode==='camera'){stopCam();startCam();}};
 /* ---- photo frame built from the mug's own artwork: gold pillars, arches, hanging stars, snow and the logo ---- */
 let frameStyle='arch';
 const PC={pillar:[728,100,112,800],arch:[835,180,528,208],dots:[452,30,30,300],star:[380,328,176,177],flake:[1205,345,120,120],
