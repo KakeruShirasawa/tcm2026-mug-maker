@@ -39,9 +39,10 @@ const COLORS=[
 {id:'schoko',de:'Schokolade',jp:'ショコラ',hex:'#4A2C22'},
 {id:'anthrazit',de:'Anthrazit',jp:'アンスラサイト',hex:'#2E3033'}];
 const FIG={
- cat:'ねこ', angel:'天使', gnome:'こびと', reindeer:'ブレーメンの音楽隊', boots:'ブーツとプレゼント', pyramid_g:'ピラミッド（緑の星）',
- gingerbread:'ジンジャーブレッド', snowman:'雪だるま', santa:'サンタクロース', nutcracker:'くるみ割り人形', train:'木の汽車', pyramid_r:'ピラミッド（赤の星）'};
-const ORDER=['santa','snowman','gingerbread','nutcracker','angel','gnome','cat','reindeer','boots','train','pyramid_g','pyramid_r'];
+ cat:'ねこ', angel:'天使', gnome:'ノーム', reindeer:'ブレーメンの音楽隊', boots:'ブーツとプレゼント', pyramid_g:'ピラミッド（緑の星）',
+ gingerbread:'ジンジャーブレッド', snowman:'雪だるま', santa:'サンタクロース', nutcracker:'くるみ割り人形', train:'木の汽車', pyramid_r:'ピラミッド（赤の星）',
+ bird:'ことり', matryoshka:'マトリョーシカ', tophat:'シルクハットの雪だるま', wolfhood:'赤ずきんとオオカミ', cinderella:'シンデレラ', snowwhite:'白雪姫', dwarfs:'七人の小人'};
+const ORDER=['santa','snowman','gingerbread','nutcracker','angel','gnome','cat','reindeer','boots','train','pyramid_g','pyramid_r','bird','matryoshka','tophat','wolfhood','cinderella','snowwhite','dwarfs'];
 const FLOAT={angel:true};
 const PRESET={red:{c:'rot',s:['cat','angel','gnome','reindeer','boots','pyramid_g']},
               navy:{c:'nacht',s:['gingerbread','snowman','santa','nutcracker','train','pyramid_r']}};
@@ -55,14 +56,15 @@ const KEYS={R:[176,34,52],G:[58,115,57],CL:[209,164,107],CD:[176,128,77]};
 /* colour variations chosen per figure (what suits each character), recolouring R / G / CL / CD families */
 const CV={red:'#B1222F',green:'#2F7A46',blue:'#2E4FA0',sky:'#5DA3D9',yellow:'#E3B22C',pink:'#E07A9B',gold:'#C99A3E',white:'#F1ECE3',white2:'#D9D0C3',gray:'#7C828F',purple:'#6B4A9A'};
 const ORIGDOT={santa:['#B1222F'],snowman:['#B1222F'],gingerbread:['#C9935A'],nutcracker:['#B1222F','#C9935A'],angel:['#2F7A46'],gnome:['#2F7A46'],
- cat:['#2F7A46','#D1A46B'],reindeer:['#D1A46B','#2F7A46'],boots:['#2F7A46'],pyramid_g:['#D1A46B','#2F7A46'],pyramid_r:['#D1A46B','#B1222F'],train:['#B1222F','#D1A46B']};
+ cat:['#2F7A46','#D1A46B'],reindeer:['#D1A46B','#2F7A46'],boots:['#2F7A46'],pyramid_g:['#D1A46B','#2F7A46'],pyramid_r:['#D1A46B','#B1222F'],train:['#B1222F','#D1A46B'],
+ bird:['#2F7A46','#D1A46B'],matryoshka:['#2F7A46','#D1A46B'],tophat:['#2F7A46'],wolfhood:['#2F7A46','#D1A46B'],cinderella:['#2F7A46','#D1A46B'],snowwhite:['#2F7A46','#D1A46B'],dwarfs:['#2F7A46']};
 const V=(id,jp,m)=>({id,jp,m});
 /* the same 10 colours for every figure; each figure decides which part takes the colour */
 const hexRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 const shade=(h,f)=>'#'+hexRgb(h).map(v=>Math.round(v*f).toString(16).padStart(2,'0')).join('');
 const COMMON=[['red','赤',CV.red],['green','緑',CV.green],['blue','青',CV.blue],['sky','水色',CV.sky],['yellow','黄色',CV.yellow],
   ['pink','ピンク',CV.pink],['purple','紫',CV.purple],['gold','金',CV.gold],['white','白',CV.white],['brown','茶','#7A4E35']];
-const MAINFAM={santa:['R'],snowman:['R'],nutcracker:['R'],train:['R'],pyramid_r:['R'],angel:['G'],gnome:['G'],cat:['G'],boots:['G'],pyramid_g:['G'],
+const MAINFAM={santa:['R'],snowman:['R'],nutcracker:['R'],train:['R'],pyramid_r:['R'],angel:['G'],gnome:['G'],cat:['G'],boots:['G'],pyramid_g:['G'],bird:['G'],matryoshka:['G'],tophat:['G'],wolfhood:['G'],cinderella:['G'],snowwhite:['G'],dwarfs:['G'],
   gingerbread:['CL','CD'],reindeer:['CL','CD']};
 const EXTRA={
  cat:[V('wcat','白ねこ',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('bcat','黒ねこ',{CL:'#3A3436',CD:'#2A2527'})],
