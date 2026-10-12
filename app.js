@@ -63,7 +63,7 @@ const V=(id,jp,m)=>({id,jp,m});
 const hexRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 const shade=(h,f)=>'#'+hexRgb(h).map(v=>Math.round(v*f).toString(16).padStart(2,'0')).join('');
 const COMMON=[['red','赤',CV.red],['green','緑',CV.green],['blue','青',CV.blue],['sky','水色',CV.sky],['yellow','黄色',CV.yellow],
-  ['pink','ピンク',CV.pink],['purple','紫',CV.purple],['gold','金',CV.gold],['white','白',CV.white],['brown','茶','#7A4E35']];
+  ['pink','ピンク',CV.pink],['purple','紫',CV.purple],['gold','金',CV.gold],['white','白','#E9E0D1'],['brown','茶','#7A4E35']];
 const MAINFAM={santa:['R'],snowman:['R'],nutcracker:['R'],train:['R'],pyramid_r:['R'],angel:['G'],gnome:['G'],cat:['G'],boots:['G'],pyramid_g:['G'],bird:['G'],matryoshka:['G'],tophat:['G'],wolfhood:['G'],cinderella:['G'],snowwhite:['G'],dwarfs:['G'],
   gingerbread:['CL','CD'],reindeer:['CL','CD']};
 const EXTRA={
@@ -150,16 +150,37 @@ function variant(k,p){ // recoloured figure (+ pixel sample + thumbnail), cached
     let cand=null;
     if(tg[pt.f]){cand=[0,0,0];pt.list.forEach(q=>{const v=recol(q*4,pt.f);cand[0]+=v[0]/L;cand[1]+=v[1]/L;cand[2]+=v[2]/L;});
       paint(i=>recol(i,pt.f));if(cr(cand,sur)>=target)return;             // the chosen colour always shows
+      if(relL(cand)>.55&&L<minArea*1.5){paint(i=>{const v=recol(i,pt.f),t=relL(v)/Math.max(.01,relL(cand));return [96,66,46].map(c=>Math.max(0,Math.min(255,c*Math.min(1.25,t))));});} // pale eyes / buttons on a pale ground: draw them in the dark ink of the artwork
       // too close to its surroundings: keep the chosen colour and draw a fine contrasting outline around it
-      const line=tune(sur,cand,2.6).map(Math.round),inP=new Set(pt.list),r1=new Set();
+      const line=tune(sur,cand,3.4).map(Math.round),inP=new Set(pt.list),r1=new Set();
       for(const q of pt.list){const x0=q%W;for(const o of [-1,1,-W,W]){const n=q+o;if(n<0||n>=N||(o===-1&&x0===0)||(o===1&&x0===W-1)||inP.has(n)||d[n*4+3]<60)continue;r1.add(n);}}
       const r2=new Set();r1.forEach(q=>{const x0=q%W;for(const o of [-1,1,-W,W]){const n=q+o;if(n<0||n>=N||(o===-1&&x0===0)||(o===1&&x0===W-1)||inP.has(n)||r1.has(n)||d[n*4+3]<60)continue;r2.add(n);}});
       r1.forEach(q=>{const i=q*4;d[i]=line[0];d[i+1]=line[1];d[i+2]=line[2];});
-      r2.forEach(q=>{const i=q*4;for(let k=0;k<3;k++)d[i+k]=Math.round(d[i+k]*.5+line[k]*.5);});
+      const r3=new Set();r2.forEach(q=>{const x0=q%W;for(const o of [-1,1,-W,W]){const n=q+o;if(n<0||n>=N||(o===-1&&x0===0)||(o===1&&x0===W-1)||inP.has(n)||r1.has(n)||r2.has(n)||d[n*4+3]<60)continue;r3.add(n);}});
+      r2.forEach(q=>{const i=q*4;d[i]=line[0];d[i+1]=line[1];d[i+2]=line[2];});
+      r3.forEach(q=>{const i=q*4;for(let k=0;k<3;k++)d[i+k]=Math.round(d[i+k]*.5+line[k]*.5);});
       return;}
     else if(cr(orig,sur)>=target){paint(i=>[d0[i],d0[i+1],d0[i+2]]);return;} // untouched part that still reads well
     const base=cand||orig,fixed=tune(base,sur,Math.max(target,2.6)),k=fixed.map((v,j)=>v-base[j]);
     paint(i=>{const v=cand?recol(i,pt.f):[d0[i],d0[i+1],d0[i+2]];return v.map((c,j)=>Math.max(0,Math.min(255,c+k[j])));});});
+  // 3b) where a recoloured area now blends into the part next to it (e.g. a white coat against a white beard),
+  //     draw a fine line inside the recoloured area along that border, as the original artwork does with its tan outlines
+  { const LW=Math.max(4,Math.round(Math.max(W,c.height)/80)),seed=[],dist=new Int16Array(N).fill(-1);
+    const px=(a,i)=>[a[i],a[i+1],a[i+2]],NC=parts.length,mN=new Float64Array(NC*4),mO=new Float64Array(NC*3);
+    for(let q=0;q<N;q++){const id=comp[q];if(id<0)continue;const i=q*4;mN[id*4]+=d[i];mN[id*4+1]+=d[i+1];mN[id*4+2]+=d[i+2];mN[id*4+3]++;mO[id*3]+=d0[i];mO[id*3+1]+=d0[i+1];mO[id*3+2]+=d0[i+2];}
+    const mean=(arr,st,id)=>{const n=mN[id*4+3]||1;return [arr[id*st]/n,arr[id*st+1]/n,arr[id*st+2]/n];},pair=new Map();
+    const lost=(A,B)=>{const key=A*NC+B;let v=pair.get(key);if(v===undefined){v=parts[B].list.length>=30&&cr(mean(mN,4,A),mean(mN,4,B))<1.45&&cr(mean(mO,3,A),mean(mO,3,B))>=1.7;pair.set(key,v);}return v;};
+    for(let p=0;p<N;p++){if(!big[p])continue;const x0=p%W,A=comp[p];let hit=false;
+      for(const o of [-1,1,-W,W]){if((o===-1&&x0<6)||(o===1&&x0>W-7))continue;   // look across thin outlines (up to 6px) to the next area
+        for(let st=1;st<=6;st++){const q=p+o*st;if(q<0||q>=N||d[q*4+3]<120)break;const B=comp[q];if(B===A)break;if(B<0)continue;
+          if(lost(A,B))hit=true;break;}
+        if(hit)break;}
+      if(hit){seed.push(p);dist[p]=0;}}
+    if(seed.length){let fr=seed,lum=0;seed.forEach(p=>lum+=relL(px(d,p*4)));lum/=seed.length;
+      const line=lum>.3?[146,100,60]:[246,238,224];
+      for(let r=1;r<LW+1&&fr.length;r++){const nx=[];for(const p of fr){const x0=p%W;for(const o of [-1,1,-W,W]){const q=p+o;if(q<0||q>=N||(o===-1&&x0===0)||(o===1&&x0===W-1))continue;
+        if(!big[q]||dist[q]>=0)continue;dist[q]=r;nx.push(q);}}fr=nx;}
+      for(let p=0;p<N;p++){const r=dist[p];if(r<0)continue;const a=r<LW-1?1:r<LW?.6:.25,i=p*4;for(let k=0;k<3;k++)d[i+k]=Math.round(d[i+k]*(1-a)+line[k]*a);}}}
   // 4) soften anti-aliased edges next to recoloured areas
   for(let p=0;p<N;p++){if(big[p]||d[p*4+3]===0||fam[p]>=0)continue;const x0=p%W;let nb=-1;
     for(const o of [-1,1,-W,W]){const q=p+o;if(q<0||q>=N||(o===-1&&x0===0)||(o===1&&x0===W-1))continue;if(big[q]){nb=q;break;}}
