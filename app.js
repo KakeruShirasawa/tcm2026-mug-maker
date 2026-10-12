@@ -502,12 +502,19 @@ const handC=$('#handC'),MP='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision
   HAND_MODELS=['assets/hand_landmarker.task','https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'];
 let lastRun=0,seen=false,holdOn=false,hl=null,hlLoading=null,lastVT=-1,miss=0,hs=null,side=1,sideVote=0,looping=false;
 const holding=()=>holdOn&&bgMode==='camera';
-async function loadHands(){if(hl)return hl;if(hlLoading)return hlLoading;
+let hlOrder=null,hlIdx=0,diag={n:0,err:'',dl:'',hits:0};
+async function loadHands(next){if(hl&&!next)return hl;if(hlLoading)return hlLoading;
   hlLoading=(async()=>{const v=await import(MP+'/vision_bundle.mjs');const fs=await v.FilesetResolver.forVisionTasks(MP+'/wasm');
-    for(const model of HAND_MODELS)for(const dl of (IOS?['CPU','GPU']:['GPU','CPU'])){ /* iPhone: CPU is the reliable path */try{return hl=await v.HandLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:model,delegate:dl},
-      runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.5,minHandPresenceConfidence:.5,minTrackingConfidence:.5});}catch(e){}}
+    if(!hlOrder){hlOrder=[];HAND_MODELS.forEach(m=>(IOS?['CPU','GPU']:['GPU','CPU']).forEach(d=>hlOrder.push([m,d])));}
+    if(next&&hl){try{hl.close();}catch(e){}hl=null;hlIdx++;}
+    for(;hlIdx<hlOrder.length*2;hlIdx++){const [model,dl]=hlOrder[hlIdx%hlOrder.length];
+      // give the task its own <canvas>: without it Safari on iPhone may get no usable WebGL context and silently finds no hands
+      try{hl=await v.HandLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:model,delegate:dl},canvas:document.createElement('canvas'),
+        runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.35,minHandPresenceConfidence:.35,minTrackingConfidence:.35});diag.dl=dl;return hl;}catch(e){diag.err=String(e&&e.message||e).slice(0,80);}}
     throw new Error('hand model');})();
   try{return await hlLoading;}finally{hlLoading=null;}}
+const DEBUG=/[?&]debug/.test(location.search);
+function showDiag(){$('#holdDiag').textContent=`認識 ${diag.n}回 / 検出 ${diag.hits} / 映像 ${cam.videoWidth}×${cam.videoHeight} / ${diag.dl}${diag.err?' / '+diag.err:''}`;}
 function holdNote(t){$('#holdNote').textContent=t;}
 async function setHold(on){
   holdOn=on;const b=$('#holdBtn');b.setAttribute('aria-pressed',on);b.textContent=on?'手で持つをやめる':'手で持つ';
@@ -524,10 +531,12 @@ function holdLoop(){if(looping)return;looping=true;
     // feed a small still copy of the frame (iPhone Safari can't hand the live video to the detector reliably)
     const vw=cam.videoWidth,vh=cam.videoHeight,sc=Math.min(1,480/Math.max(vw,vh));if(detC.width!==Math.round(vw*sc)){detC.width=Math.round(vw*sc);detC.height=Math.round(vh*sc);}
     detX.drawImage(cam,0,0,detC.width,detC.height);
-    let res;try{res=hl.detectForVideo(detC,now);}catch(e){return;}
+    let res;try{res=hl.detectForVideo(detC,now);diag.n++;}catch(e){diag.err=String(e&&e.message||e).slice(0,80);showDiag();return;}
+    if(diag.n<4||diag.n%10===0)showDiag();
     const L=res&&res.landmarks&&res.landmarks[0];
-    if(!L){if(++miss===10){handC.getContext('2d').clearRect(0,0,handC.width,handC.height);holdNote('手が見つかりません。手全体がカメラに映るようにしてください。');}return;}
-    if(miss>=10||!seen){seen=true;holdNote('持てました。手を動かすとマグもついてきます。');}miss=0;applyHand(L);};
+    if(!L){if(miss===60&&!diag.hits){loadHands(true).then(()=>{miss=0;}).catch(()=>{});}   // nothing at all yet: try the other way of running the detector
+      if(++miss===10){handC.getContext('2d').clearRect(0,0,handC.width,handC.height);holdNote('手が見つかりません。手全体がカメラに映るようにしてください。');}return;}
+    diag.hits++;if(miss>=10||!seen){seen=true;holdNote('持てました。手を動かすとマグもついてきます。');}miss=0;applyHand(L);};
   requestAnimationFrame(step);}
 const _v=new THREE.Vector3(),detC=document.createElement('canvas'),detX=detC.getContext('2d',{willReadFrequently:true});
 function proj(x,y,z){_v.set(x,y,z).applyMatrix4(mug.matrixWorld).project(camera);return {x:_v.x*.5,y:-_v.y*.5};} // offset from layer centre, in layer widths
@@ -556,6 +565,7 @@ function applyHand(L){
   [[[1,2,3,4],.3],[[5,6,7,8],.3],[[9,10,11,12],.3],[[13,14,15,16],.28],[[17,18,19,20],.25]].forEach(([ch,wd])=>{x.lineWidth=span*wd;x.beginPath();
     ch.forEach((i,j)=>{const q=P(i);j?x.lineTo(q.x,q.y):x.moveTo(q.x,q.y);});x.stroke();});
   x.globalCompositeOperation='source-in';if(mirror){x.translate(W,0);x.scale(-1,1);}x.drawImage(cam,ox,oy,vw*s,vh*s);x.restore();
+  if(DEBUG){x.save();x.scale(d,d);x.fillStyle='#0f0';for(let i=0;i<21;i++){const q=P(i);x.fillRect(q.x-3,q.y-3,6,6);}x.restore();}
 }
 $('#holdBtn').onclick=()=>setHold(!holdOn);
 document.querySelectorAll('#camSw button').forEach(b=>b.onclick=()=>{if(facing===b.dataset.cam)return;facing=b.dataset.cam;

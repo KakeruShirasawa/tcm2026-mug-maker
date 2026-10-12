@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Shippori+Mincho+B1:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Kalam:wght@400&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=202610121656">
 </head>
 <body>
 <div class="loader" id="loader"><div class="in"><i>Tokyo Christmas Market 2026</i><span>MUG MAKER</span><div class="bar"></div></div></div>
@@ -143,7 +143,7 @@
       </div>
       <div class="ctrl">
         <div class="range" id="camRow"><label>カメラ <em>Kamera</em></label><div class="frames" id="camSw"><button data-cam="environment" aria-pressed="true">外カメラ</button><button data-cam="user" aria-pressed="false">自撮り</button></div></div>
-        <div class="range holdrow" id="holdRow"><label>手で持つ <em>Halten</em></label><button class="ghost" id="holdBtn" aria-pressed="false">手で持つ</button><p class="note" id="holdNote" style="margin:6px 0 0"></p></div>
+        <div class="range holdrow" id="holdRow"><label>手で持つ <em>Halten</em></label><button class="ghost" id="holdBtn" aria-pressed="false">手で持つ</button><p class="note" id="holdNote" style="margin:6px 0 0"></p><p class="note" id="holdDiag" style="margin:2px 0 0;font-size:10.5px;opacity:.6"></p></div>
         <div class="range"><label for="rSize">マグの大きさ <em>Größe</em></label><input type="range" id="rSize" min="14" max="80" value="34"></div>
         <div class="range"><label for="rTurn">マグの向き（360°） <em>Drehen</em></label><input type="range" id="rTurn" min="-180" max="180" value="0"></div>
         <div class="range"><label for="rTilt">見る角度 <em>Neigung</em></label><input type="range" id="rTilt" min="-20" max="75" value="12"></div>
@@ -178,8 +178,8 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="config.js"></script>
-<script src="assets/data.js"></script>
-<script src="app.js"></script>
+<script src="config.js?v=202610121656"></script>
+<script src="assets/data.js?v=202610121656"></script>
+<script src="app.js?v=202610121656"></script>
 </body>
 </html>
