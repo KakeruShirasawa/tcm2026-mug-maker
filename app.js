@@ -253,7 +253,7 @@ function compose(){
   if(tex){tex.body.needsUpdate=true;tex.foot.needsUpdate=true;mats.glaze.color.set(hex).convertSRGBToLinear();}
 }
 /* keep figures off the "Tokyo Christmas Market 2026" lettering: shrink and/or nudge sideways until no word is touched */
-const LOGO_BOX=[2850,420,3440,990],CELL=8,LOGO_PAD=18;let logoGrid=null;
+const LOGO_U=3150/4096;const LOGO_BOX=[2850,420,3440,990],CELL=8,LOGO_PAD=18;let logoGrid=null;
 function getLogoGrid(){ // occupancy grid of the gold lettering (from the gold layer), grown by LOGO_PAD
   if(logoGrid)return logoGrid;const [L,T,R,Bt]=LOGO_BOX,W=R-L,H=Bt-T,c=document.createElement('canvas');c.width=W;c.height=H;
   const x=c.getContext('2d');x.drawImage(LAY.gold,-L,-T);const d=x.getImageData(0,0,W,H).data,gw=Math.ceil(W/CELL),gh=Math.ceil(H/CELL),g=new Uint8Array(gw*gh);
@@ -291,7 +291,8 @@ function drift(cx,bottom,w,edge){ // small mound of snow in front of the feet
 function drawInner(){
   ix.fillStyle='#F3EEE3';ix.fillRect(0,0,2048,512);
   ix.save();ix.translate(2048,0);ix.scale(-1,1); // seen from inside → mirror
-  const u=2048*0.25;ix.fillStyle='#2A2A2E';ix.textAlign='center';
+  // the lettering sits on the far inner wall, straight behind the front logo (read over the rim when the logo faces you)
+  const u=2048*(1-((LOGO_U+.5)%1));ix.fillStyle='#2A2A2E';ix.textAlign='center';
   ix.font='400 46px Kalam, "Comic Sans MS", cursive';ix.fillText('2026',u,96);
   ix.font='400 44px Kalam, "Comic Sans MS", cursive';ix.fillText('Tokyo Christmas Market',u,150);
   ix.restore();if(tex)tex.inner.needsUpdate=true;
@@ -428,7 +429,7 @@ function refreshUI(){
 function refresh(){compose();refreshUI();}
 
 /* ------------------------------------------------------------------ step II: photo */
-const scene2=$('#scene'),layer=$('#mugLayer'),cam=$('#cam'),venueImg=$('#venueImg'),upImg=$('#upImg');
+const scene2=$('#scene'),layer=$('#mugLayer'),cam=$('#cam'),upImg=$('#upImg');
 let bgMode='camera',stream=null,lp={x:50,y:66,s:34};
 function step(s){
   document.querySelectorAll('.steps button').forEach(b=>b.setAttribute('aria-selected',b.dataset.step===s));
@@ -440,45 +441,56 @@ function step(s){
 function placeLayer(){layer.style.left=lp.x+'%';layer.style.top=lp.y+'%';layer.style.width=lp.s+'%';resize();drawFrameLive();}
 document.querySelectorAll('.ptabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.ptabs button').forEach(x=>x.setAttribute('aria-selected',x===b));setBg(b.dataset.bg);});
 function setBg(m){
-  bgMode=m;document.querySelectorAll('.ptabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.bg===m));stopCam();venueImg.hidden=m!=='venue';cam.hidden=m!=='camera';upImg.hidden=m!=='upload'||!upImg.src;
+  bgMode=m;document.querySelectorAll('.ptabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.bg===m));stopCam();cam.hidden=m!=='camera';upImg.hidden=m!=='upload'||!upImg.src;
   $('#dropzone').hidden=!(m==='upload'&&!upImg.getAttribute('src'));$('#camnote').hidden=true;
-  scene2.classList.toggle('tall',m!=='venue'&&window.innerWidth<700);
-  if(m==='venue'){lp={x:50,y:67,s:30};}else{lp={x:50,y:60,s:window.innerWidth<700?56:36};}
+  lp={x:50,y:62,s:window.innerWidth<700?56:36};fitScene();
   $('#rSize').value=lp.s;placeLayer();if(m==='camera')startCam();
 }
 async function startCam(){
   try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});cam.srcObject=stream;await cam.play();}
   catch(err){const n=$('#camnote');n.hidden=false;
-    n.innerHTML='カメラを起動できませんでした。ブラウザの設定でカメラの利用を許可してください。カメラがない場合はこちらから選べます。<span class="camalt"><button data-go="upload">写真に合わせる</button><button data-go="venue">会場の背景に合わせる</button></span>';
+    n.innerHTML='カメラを起動できませんでした。ブラウザの設定でカメラの利用を許可してください。カメラがない場合はこちらから選べます。<span class="camalt"><button data-go="upload">写真に合わせる</button></span>';
     n.querySelectorAll('button').forEach(b=>b.onclick=()=>setBg(b.dataset.go));}
 }
 function stopCam(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}}
-$('#fileIn').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{upImg.src=r.result;upImg.hidden=false;$('#dropzone').hidden=true;};r.readAsDataURL(f);});
+/* the photo frame takes the shape of the chosen photo, so the whole picture is used (nothing cut off on phones) */
+function fitScene(){const box=scene2.parentElement.clientWidth||scene2.clientWidth,phone=window.innerWidth<700;
+  let ratio=phone?3/4:16/9;
+  if(bgMode==='upload'&&upImg.getAttribute('src')&&upImg.naturalWidth)ratio=Math.max(9/16,Math.min(16/9,upImg.naturalWidth/upImg.naturalHeight));
+  const maxH=window.innerHeight*(phone?.68:.78),w=Math.min(box,maxH*ratio);
+  scene2.style.aspectRatio=String(ratio);scene2.style.width=Math.round(w)+'px';scene2.style.maxWidth='100%';scene2.style.margin='0 auto';
+  requestAnimationFrame(()=>{placeLayer();});}
+function loadPhoto(f){if(!f)return;const r=new FileReader();r.onload=()=>{upImg.onload=()=>{upImg.hidden=false;$('#dropzone').hidden=true;$('#rePhoto').hidden=false;
+    lp={x:50,y:62,s:window.innerWidth<700?52:34};$('#rSize').value=lp.s;fitScene();};upImg.src=r.result;};r.readAsDataURL(f);}
+$('#fileIn').addEventListener('change',e=>{loadPhoto(e.target.files[0]);e.target.value='';});
+$('#fileIn2').addEventListener('change',e=>{loadPhoto(e.target.files[0]);e.target.value='';});
 $('#rSize').addEventListener('input',e=>{lp.s=+e.target.value;placeLayer();});
 $('#rTilt').addEventListener('input',e=>{tilt=(+e.target.value)*Math.PI/180;resize();});
 let turn0=0;$('#rTurn').addEventListener('input',e=>{rotY=-2*Math.PI*0.72+(+e.target.value)*Math.PI/180;targetY=null;velY=0;});
-(function(){ // mouse: drag the mug to move it (PC). touch: 1 finger turns/tilts, 2 fingers move + pinch (phone)
-  let d=false,sx,sy,ox,oy;
-  layer.addEventListener('pointerdown',e=>{if(e.pointerType==='touch')return;d=true;layer.setPointerCapture(e.pointerId);sx=e.clientX;sy=e.clientY;ox=lp.x;oy=lp.y;});
-  layer.addEventListener('pointermove',e=>{if(!d||e.pointerType==='touch')return;const r=scene2.getBoundingClientRect();
-    lp.x=Math.max(5,Math.min(95,ox+(e.clientX-sx)/r.width*100));lp.y=Math.max(8,Math.min(95,oy+(e.clientY-sy)/r.height*100));placeLayer();});
-  const up=()=>{d=false;};layer.addEventListener('pointerup',up);layer.addEventListener('pointercancel',up);
-  const pts=new Map();let g=null;
-  const mid=()=>{const [a,b]=[...pts.values()];return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,dist:Math.hypot(a.x-b.x,a.y-b.y)};};
-  const start=()=>{if(pts.size===1){const p=[...pts.values()][0];g={mode:'turn',x:p.x,y:p.y};}
-    else if(pts.size===2){const m=mid();g={mode:'move',mx:m.x,my:m.y,dist:m.dist,ox:lp.x,oy:lp.y,os:lp.s};}};
-  scene2.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch'||e.target.closest('label,input,button'))return;
-    scene2.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});start();});
-  scene2.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'||!pts.has(e.pointerId)||!g)return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    const r=scene2.getBoundingClientRect();
-    if(g.mode==='turn'&&pts.size===1){const p=[...pts.values()][0],dx=p.x-g.x,dy=p.y-g.y;g.x=p.x;g.y=p.y;
-      rotY+=dx*.012;targetY=null;velY=0;tilt=Math.max(-.35,Math.min(1.3,tilt+dy*.007));resize();
-      let deg=((rotY+2*Math.PI*.72)*180/Math.PI)%360;if(deg>180)deg-=360;if(deg<-180)deg+=360;$('#rTurn').value=deg;$('#rTilt').value=Math.round(tilt*180/Math.PI);}
-    else if(g.mode==='move'&&pts.size===2){const m=mid();
-      lp.x=Math.max(5,Math.min(95,g.ox+(m.x-g.mx)/r.width*100));lp.y=Math.max(8,Math.min(95,g.oy+(m.y-g.my)/r.height*100));
-      lp.s=Math.max(14,Math.min(80,g.os*m.dist/Math.max(20,g.dist)));$('#rSize').value=lp.s;placeLayer();}});
-  const end=e=>{if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);g=null;if(pts.size)start();};
-  scene2.addEventListener('pointerup',end);scene2.addEventListener('pointercancel',end);
+(function(){ // move the mug: drag with the mouse or one finger anywhere on the photo. two fingers: pinch = size, twist = turn
+  const r=()=>scene2.getBoundingClientRect(),clampPos=()=>{lp.x=Math.max(3,Math.min(97,lp.x));lp.y=Math.max(5,Math.min(97,lp.y));};
+  const syncTurn=()=>{let deg=((rotY+2*Math.PI*.72)*180/Math.PI)%360;if(deg>180)deg-=360;if(deg<-180)deg+=360;$('#rTurn').value=Math.round(deg);};
+  const skip=t=>t.closest&&t.closest('label,input,button,.camnote,.dropzone');
+  // mouse / pen
+  let m=null;
+  scene2.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||skip(e.target))return;m={x:e.clientX,y:e.clientY,ox:lp.x,oy:lp.y};scene2.setPointerCapture(e.pointerId);scene2.classList.add('grabbing');});
+  scene2.addEventListener('pointermove',e=>{if(!m||e.pointerType==='touch')return;const R=r();lp.x=m.ox+(e.clientX-m.x)/R.width*100;lp.y=m.oy+(e.clientY-m.y)/R.height*100;clampPos();placeLayer();});
+  const mu=()=>{m=null;scene2.classList.remove('grabbing');};scene2.addEventListener('pointerup',mu);scene2.addEventListener('pointercancel',mu);
+  scene2.addEventListener('wheel',e=>{if(skip(e.target))return;e.preventDefault();lp.s=Math.max(14,Math.min(80,lp.s*(e.deltaY<0?1.06:1/1.06)));$('#rSize').value=lp.s;placeLayer();},{passive:false});
+  // touch (handled with touch events: works the same on iPhone Safari and Android Chrome)
+  let t=null;
+  const two=(a,b)=>({x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2,d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),ang:Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX)});
+  const begin=e=>{const T=e.touches;if(T.length===1)t={n:1,x:T[0].clientX,y:T[0].clientY,ox:lp.x,oy:lp.y};
+    else if(T.length>=2){const q=two(T[0],T[1]);t={n:2,x:q.x,y:q.y,d:q.d,ang:q.ang,ox:lp.x,oy:lp.y,os:lp.s,ry:rotY};}};
+  scene2.addEventListener('touchstart',e=>{if(skip(e.target))return;e.preventDefault();begin(e);},{passive:false});
+  scene2.addEventListener('touchmove',e=>{if(!t)return;e.preventDefault();const R=r(),T=e.touches;
+    if(t.n===1&&T.length===1){lp.x=t.ox+(T[0].clientX-t.x)/R.width*100;lp.y=t.oy+(T[0].clientY-t.y)/R.height*100;}
+    else if(t.n===2&&T.length>=2){const q=two(T[0],T[1]);lp.x=t.ox+(q.x-t.x)/R.width*100;lp.y=t.oy+(q.y-t.y)/R.height*100;
+      lp.s=Math.max(14,Math.min(80,t.os*q.d/Math.max(20,t.d)));$('#rSize').value=lp.s;
+      let da=q.ang-t.ang;if(da>Math.PI)da-=2*Math.PI;if(da<-Math.PI)da+=2*Math.PI;rotY=t.ry+da*1.6;targetY=null;velY=0;syncTurn();}
+    clampPos();placeLayer();},{passive:false});
+  const tend=e=>{if(!t)return;if(e.touches.length)begin(e);else t=null;};
+  scene2.addEventListener('touchend',tend);scene2.addEventListener('touchcancel',tend);
 })();
 /* ---- photo frame built from the mug's own artwork: gold pillars, arches, hanging stars, snow and the logo ---- */
 let frameStyle='arch';
@@ -554,8 +566,7 @@ $('#shoot').onclick=()=>{
   const r=scene2.getBoundingClientRect(),W=1600,H=Math.round(1600*r.height/r.width),k=W/r.width;
   const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
   x.fillStyle='#14182F';x.fillRect(0,0,W,H);
-  if(bgMode==='venue')cover(x,venueImg,venueImg.naturalWidth,venueImg.naturalHeight,W,H);
-  else if(bgMode==='camera'&&stream)cover(x,cam,cam.videoWidth,cam.videoHeight,W,H);
+  if(bgMode==='camera'&&stream)cover(x,cam,cam.videoWidth,cam.videoHeight,W,H);
   else if(bgMode==='upload'&&upImg.getAttribute('src'))cover(x,upImg,upImg.naturalWidth,upImg.naturalHeight,W,H);
   renderer.render(scene,camera);const lr=layer.getBoundingClientRect();
   x.drawImage(renderer.domElement,(lr.left-r.left)*k,(lr.top-r.top)*k,lr.width*k,lr.height*k);
@@ -576,7 +587,7 @@ $('#share').onclick=async()=>{track('share',design());
   const a=document.createElement('a');a.href='https://twitter.com/intent/tweet?text='+encodeURIComponent(text);a.target='_blank';a.rel='noopener';a.click();
 };
 $('#back').onclick=()=>step('design');
-if(window.matchMedia('(pointer:coarse)').matches)$('#photoHint').textContent='1本指でマグを回す・傾ける。2本指で動かす・大きさを変える。';
+if(window.matchMedia('(pointer:coarse)').matches)$('#photoHint').textContent='1本指でマグを動かす。2本指で広げる・縮めると大きさ、ひねると向きが変わります。';
 
 
 /* ------------------------------------------------------------------ landing */
@@ -636,7 +647,7 @@ $('#toTop').onclick=e=>{e.preventDefault();window.scrollTo({top:0,behavior:'smoo
 
 /* ------------------------------------------------------------------ boot */
 (async function(){
-  venueImg.src=A.venue;buildUI();await loadAll();
+  buildUI();await loadAll();
   try{await document.fonts.load('46px Kalam');await document.fonts.load('600 30px "Shippori Mincho B1"','東京クリスマスマーケット2026');}catch(e){}
   drawInner();splitLayers();initThree();compose();refreshUI();
   const mq=window.matchMedia('(max-width:600px)'),chips=$('#chips'),cb=$('#colorBlk');

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>クリスマスマグカップメーカー｜東京クリスマスマーケット2026</title>
-<meta name="description" content="2026年の公式マグカップのキャラクターと36色の地色を組み合わせて、世界にひとつのクリスマスマグを。会場の背景やカメラでARフォトも撮れます。">
+<meta name="description" content="2026年の公式マグカップのキャラクターと36色の地色を組み合わせて、世界にひとつのクリスマスマグを。スマホのカメラでARフォトも撮れます。">
 <meta property="og:title" content="クリスマスマグカップメーカー｜東京クリスマスマーケット2026">
 <meta property="og:description" content="公式マグのキャラクターと色を自由に組み合わせて、オリジナルのクリスマスマグをつくろう。">
 <meta property="og:type" content="website">
@@ -31,7 +31,7 @@
         <div class="eyebrow">Deine Tasse, deine Weihnacht.</div>
         <h2>世界にひとつの、<br><em>クリスマスマグ</em>を。</h2>
         <p class="name">クリスマスマグカップメーカー</p>
-        <p>2026年の公式マグカップに描かれたキャラクターと、36色の地色を自由に組み合わせて。できあがったマグは、会場の背景やスマホのカメラで記念写真にできます。</p>
+        <p>2026年の公式マグカップに描かれたキャラクターと、36色の地色を自由に組み合わせて。できあがったマグは、スマホのカメラや手持ちの写真に置いて記念写真にできます。</p>
         <a class="start" href="#" id="startBtn">Start<span>マグをつくる</span></a>
       </div>
       <div class="hstage">
@@ -52,7 +52,7 @@
     <div class="points">
       <article class="point"><span class="no">Point 01</span><h4>36色の地色</h4><div class="vis"><div class="vchips" id="vchips"></div></div><p>公式のレッドとネイビーに加えて、パステルや深い冬の色まで。明るい色では雪や星の柄が自動で見やすい色に変わります。</p></article>
       <article class="point"><span class="no">Point 02</span><h4>19のキャラクターと色違い</h4><div class="vis"><div class="vfigs" id="vfigs"></div></div><p>レッドとネイビーのマグのキャラクターに、白雪姫やシンデレラなど童話の仲間も加わりました。どのキャラクターも同じ10色から色違いを選べて、ねこやトナカイには特別な色も。</p></article>
-      <article class="point"><span class="no">Point 03</span><h4>ARフォトで記念に</h4><div class="vis"><div class="vframe"><canvas id="vframe" width="300" height="225"></canvas></div></div><p>カメラに映した景色や会場の背景にマグを置いて、フォトフレーム付きの写真に。360°回して好きな角度で撮れます。</p></article>
+      <article class="point"><span class="no">Point 03</span><h4>ARフォトで記念に</h4><div class="vis"><div class="vframe"><canvas id="vframe" width="300" height="225"></canvas></div></div><p>カメラに映した景色や手持ちの写真にマグを置いて、フォトフレーム付きの写真に。360°回して好きな角度で撮れます。</p></article>
     </div>
   </section>
 
@@ -60,7 +60,7 @@
     <div class="lhead"><em>So geht's</em><h3>つくりかた</h3></div>
     <div class="steps3">
       <div class="st3"><span class="n">1</span><div><b>デザインする</b><p>地色を選び、6つの場所にキャラクターを置いて色を整えます。</p></div></div>
-      <div class="st3"><span class="n">2</span><div><b>かざる</b><p>カメラのARフォト、手持ちの写真、会場の背景から選んでマグを置きます。</p></div></div>
+      <div class="st3"><span class="n">2</span><div><b>かざる</b><p>カメラのARフォトか手持ちの写真を選んで、指やマウスでマグを好きな場所へ動かします。</p></div></div>
       <div class="st3"><span class="n">3</span><div><b>撮って、シェア</b><p>フォトフレームを付けて保存。SNSでシェアしてみてください。</p></div></div>
     </div>
   </section>
@@ -130,11 +130,9 @@
     <div class="ptabs" role="tablist" aria-label="背景">
       <button role="tab" aria-selected="true" data-bg="camera">ARフォト</button>
       <button role="tab" aria-selected="false" data-bg="upload">写真に合わせる</button>
-      <button role="tab" aria-selected="false" data-bg="venue">会場の背景に合わせる</button>
     </div>
     <div class="photogrid">
       <div class="scene" id="scene">
-        <img id="venueImg" alt="東京クリスマスマーケットの会場イメージ">
         <video id="cam" playsinline muted hidden></video>
         <img id="upImg" alt="" hidden>
         <div class="dropzone" id="dropzone" hidden><label for="fileIn">写真を選ぶ<input type="file" id="fileIn" accept="image/*"></label></div>
@@ -148,7 +146,8 @@
         <div class="range"><label for="rTilt">見る角度 <em>Neigung</em></label><input type="range" id="rTilt" min="-20" max="75" value="12"></div>
         <div class="range"><label>フォトフレーム <em>Rahmen</em></label><div class="frames" id="frames">
           <button data-f="arch" aria-pressed="true">アーチ</button><button data-f="snow" aria-pressed="false">雪とロゴ</button><button data-f="none" aria-pressed="false">なし</button></div></div>
-        <p class="note" style="margin:0" id="photoHint">マグはドラッグで好きな場所に動かせます。</p>
+        <label class="ghost repick" id="rePhoto" hidden>別の写真を選ぶ<input type="file" id="fileIn2" accept="image/*"></label>
+        <p class="note" style="margin:0" id="photoHint">ドラッグでマグを好きな場所に動かせます。マウスホイールで大きさも変えられます。</p>
         <button class="cta" id="shoot">この写真を作る <small>Foto</small></button>
         <button class="ghost" id="back">デザインに戻る</button>
       </div>
