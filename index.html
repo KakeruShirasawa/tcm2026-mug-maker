@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=Shippori+Mincho+B1:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Kalam:wght@400&display=swap">
-<link rel="stylesheet" href="style.css?v=202610121656">
+<link rel="stylesheet" href="style.css?v=202610121740">
 </head>
 <body>
 <div class="loader" id="loader"><div class="in"><i>Tokyo Christmas Market 2026</i><span>MUG MAKER</span><div class="bar"></div></div></div>
@@ -135,6 +135,7 @@
       <div class="scene" id="scene">
         <video id="cam" playsinline muted hidden></video>
         <img id="upImg" alt="" hidden>
+        <canvas id="camC" class="camc" hidden></canvas>
         <div class="dropzone" id="dropzone" hidden><label for="fileIn">写真を選ぶ<input type="file" id="fileIn" accept="image/*"></label></div>
         <div class="mugLayer" id="mugLayer"></div>
         <canvas class="framec" id="handC"></canvas>
@@ -178,8 +179,8 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="config.js?v=202610121656"></script>
-<script src="assets/data.js?v=202610121656"></script>
-<script src="app.js?v=202610121656"></script>
+<script src="config.js?v=202610121740"></script>
+<script src="assets/data.js?v=202610121740"></script>
+<script src="app.js?v=202610121740"></script>
 </body>
 </html>
