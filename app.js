@@ -718,15 +718,23 @@ $('#shoot').onclick=()=>{
   else{x.fillStyle='rgba(243,232,210,.92)';x.font=`italic 500 ${Math.round(W*.022)}px "EB Garamond", serif`;x.textAlign='right';
   x.shadowColor='rgba(0,0,0,.45)';x.shadowBlur=8;x.fillText('Tokyo Christmas Market 2026',W-W*.025,H-W*.048);
   x.shadowColor='rgba(0,0,0,.5)';jpLine(x,W-W*.025,H-W*.022,W*.014,'rgba(243,232,210,.95)','right');}
-  const url=c.toDataURL('image/png');$('#resultImg').src=url;$('#dl').href=url;$('#modal').classList.add('on');
+  const url=c.toDataURL('image/jpeg',.92);$('#resultImg').src=url;$('#dl').href=url;$('#modal').classList.add('on');
+  shotFile=null;c.toBlob(b=>{if(b)shotFile=new File([b],'tokyo-christmas-market-2026-mug.jpg',{type:'image/jpeg'});},'image/jpeg',.92);
   track('capture',Object.assign(design(),{frame:frameStyle,bg:bgMode}));
 };
 $('#mClose').onclick=()=>$('#modal').classList.remove('on');
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').classList.remove('on');});
-$('#dl').addEventListener('click',()=>track('save',design()));
+/* phones: save straight to the Photos app through the share sheet (「画像を保存」); computers: normal download */
+let shotFile=null;const PHONE=window.matchMedia('(pointer:coarse)').matches;
+const canShareImg=()=>{try{return PHONE&&!!navigator.canShare&&navigator.canShare({files:[new File([new Blob(['x'],{type:'image/jpeg'})],'t.jpg',{type:'image/jpeg'})]});}catch(e){return false;}};
+if(canShareImg()){$('#dl').textContent='写真アプリに保存';$('#saveNote').textContent='「写真アプリに保存」→「画像を保存」で写真アプリに入ります。画像の長押しでも保存できます。';}
+$('#dl').addEventListener('click',async e=>{track('save',design());
+  if(!canShareImg())return;e.preventDefault();
+  try{let f=shotFile;if(!f){const b=await (await fetch($('#resultImg').src)).blob();f=new File([b],'tokyo-christmas-market-2026-mug.jpg',{type:'image/jpeg'});}
+    await navigator.share({files:[f]});}catch(err){if(err&&err.name==='AbortError')return;const a=document.createElement('a');a.href=$('#resultImg').src;a.download='tokyo-christmas-market-2026-mug.jpg';a.click();}});
 $('#share').onclick=async()=>{track('share',design());
   const text='東京クリスマスマーケット2026のマグカップメーカーで、オリジナルマグを作りました #東京クリスマスマーケット';
-  try{const blob=await (await fetch($('#resultImg').src)).blob();const f=new File([blob],'mug.png',{type:'image/png'});
+  try{const blob=await (await fetch($('#resultImg').src)).blob();const f=shotFile||new File([blob],'mug.jpg',{type:'image/jpeg'});
     if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],text});return;}}catch(e){}
   const a=document.createElement('a');a.href='https://twitter.com/intent/tweet?text='+encodeURIComponent(text);a.target='_blank';a.rel='noopener';a.click();
 };
