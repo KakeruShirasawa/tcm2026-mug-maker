@@ -57,26 +57,27 @@ const CV={red:'#B1222F',green:'#2F7A46',blue:'#2E4FA0',sky:'#5DA3D9',yellow:'#E3
 const ORIGDOT={santa:['#B1222F'],snowman:['#B1222F'],gingerbread:['#C9935A'],nutcracker:['#B1222F','#C9935A'],angel:['#2F7A46'],gnome:['#2F7A46'],
  cat:['#2F7A46','#D1A46B'],reindeer:['#D1A46B','#2F7A46'],boots:['#2F7A46'],pyramid_g:['#D1A46B','#2F7A46'],pyramid_r:['#D1A46B','#B1222F'],train:['#B1222F','#D1A46B']};
 const V=(id,jp,m)=>({id,jp,m});
-const VARIANTS={
- santa:[V('green','緑のサンタ',{R:CV.green}),V('blue','青いサンタ',{R:CV.blue}),V('gold','金のサンタ',{R:CV.gold}),V('pink','ピンクのサンタ',{R:CV.pink}),V('yellow','黄色のサンタ',{R:CV.yellow})],
- snowman:[V('yellow','黄色の帽子',{R:CV.yellow}),V('green','緑のマフラー',{R:CV.green}),V('blue','青のマフラー',{R:CV.sky}),V('pink','ピンクの帽子',{R:CV.pink}),V('purple','紫の帽子',{R:CV.purple})],
- gingerbread:[V('white','ホワイトチョコ',{CL:'#F1E6D2',CD:'#D9C6A8'}),V('dark','ビターチョコ',{CL:'#6E4630',CD:'#553422'}),V('honey','ハニー',{CL:'#E8B54A',CD:'#C9952E'}),V('berry','いちご',{CL:'#EBA3B6',CD:'#D07F98',R:'#B8295A'}),V('matcha','抹茶',{CL:'#A9BF6A',CD:'#8AA04E'})],
- nutcracker:[V('blue','青の兵隊',{R:CV.blue}),V('green','緑の兵隊',{R:CV.green}),V('yellow','黄色の兵隊',{R:CV.yellow}),V('white','白の兵隊',{R:CV.white}),V('purple','紫の兵隊',{R:CV.purple})],
- angel:[V('yellow','黄色のドレス',{G:CV.yellow}),V('pink','ピンクのドレス',{G:CV.pink}),V('sky','水色のドレス',{G:CV.sky}),V('red','赤のドレス',{G:CV.red}),V('white','白のドレス',{G:CV.white,CL:'#C99A3E'})],
- gnome:[V('red','赤い帽子',{G:CV.red}),V('blue','青い帽子',{G:CV.blue}),V('yellow','黄色の帽子',{G:CV.yellow}),V('gray','グレーの帽子',{G:CV.gray}),V('pink','ピンクの帽子',{G:CV.pink})],
- cat:[V('red','赤い帽子',{G:CV.red}),V('blue','青い帽子',{G:CV.blue}),V('yellow','黄色の帽子',{G:CV.yellow}),V('white','白ねこ',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('black','黒ねこ',{CL:'#3A3436',CD:'#2A2527'})],
- reindeer:[V('white','白い動物たち',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('choco','茶色の動物たち',{CL:'#7A4E35',CD:'#5A3826'}),V('golden','金色の動物たち',{CL:'#E6BC55',CD:'#C08E2E'}),V('red','赤い鞍',{G:CV.red}),V('blue','青い鞍',{G:CV.blue})],
- boots:[V('red','赤のブーツ',{G:CV.red}),V('blue','青のブーツ',{G:CV.blue}),V('yellow','黄色のブーツ',{G:CV.yellow}),V('pink','ピンクのブーツ',{G:CV.pink}),V('gold','金のブーツ',{G:CV.gold})],
- pyramid_g:[V('red','赤い星',{G:CV.red}),V('blue','青い星',{G:CV.blue}),V('purple','紫の星',{G:CV.purple}),V('white','白木',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('dark','くるみ材',{CL:'#8A5A35',CD:'#6A4226'})],
- pyramid_r:[V('green','緑の星',{R:'#1F5A3A'}),V('blue','青い星',{R:CV.blue}),V('purple','紫の星',{R:CV.purple}),V('white','白木',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('dark','くるみ材',{CL:'#8A5A35',CD:'#6A4226'})],
- train:[V('blue','青い汽車',{R:CV.blue}),V('green','緑の汽車',{R:CV.green}),V('yellow','黄色の汽車',{R:CV.yellow}),V('pink','ピンクの汽車',{R:CV.pink}),V('red','赤い車体',{CL:CV.red,CD:'#8A1A26',R:CV.yellow})]};
+/* the same 10 colours for every figure; each figure decides which part takes the colour */
+const hexRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+const shade=(h,f)=>'#'+hexRgb(h).map(v=>Math.round(v*f).toString(16).padStart(2,'0')).join('');
+const COMMON=[['red','赤',CV.red],['green','緑',CV.green],['blue','青',CV.blue],['sky','水色',CV.sky],['yellow','黄色',CV.yellow],
+  ['pink','ピンク',CV.pink],['purple','紫',CV.purple],['gold','金',CV.gold],['white','白',CV.white],['brown','茶','#7A4E35']];
+const MAINFAM={santa:['R'],snowman:['R'],nutcracker:['R'],train:['R'],pyramid_r:['R'],angel:['G'],gnome:['G'],cat:['G'],boots:['G'],pyramid_g:['G'],
+  gingerbread:['CL','CD'],reindeer:['CL','CD']};
+const EXTRA={
+ cat:[V('wcat','白ねこ',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('bcat','黒ねこ',{CL:'#3A3436',CD:'#2A2527'})],
+ reindeer:[V('rsaddle','赤い鞍',{G:CV.red}),V('bsaddle','青い鞍',{G:CV.blue})],
+ pyramid_g:[V('wwood','白木',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('dwood','くるみ材',{CL:'#8A5A35',CD:'#6A4226'})],
+ pyramid_r:[V('wwood','白木',{CL:'#F1ECE3',CD:'#D8CFC2'}),V('dwood','くるみ材',{CL:'#8A5A35',CD:'#6A4226'})],
+ train:[V('rbody','赤い車体',{CL:CV.red,CD:'#8A1A26',R:CV.yellow})]};
+const VARIANTS={};
+Object.keys(MAINFAM).forEach(k=>{VARIANTS[k]=COMMON.map(([id,jp,hex])=>{const m={};MAINFAM[k].forEach((f,i)=>m[f]=i?shade(hex,.8):hex);return V(id,jp,m);}).concat(EXTRA[k]||[]);});
 const getVar=(k,p)=>(p&&p!=='orig'&&VARIANTS[k]&&VARIANTS[k].find(v=>v.id===p))||V('orig','オリジナル',null);
 const varDots=(k,v)=>v.m?Object.values(v.m).slice(0,2):ORIGDOT[k];
 
 /* ------------------------------------------------------------------ helpers */
 const $=s=>document.querySelector(s);
 const load=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src;});
-const hexRgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
 const ground=x=>A.snowtop[Math.max(0,Math.min(A.snowtop.length-1,Math.round(x/8)))];
 
 /* ------------------------------------------------------------------ images */
@@ -146,8 +147,15 @@ function variant(k,p){ // recoloured figure (+ pixel sample + thumbnail), cached
     const paint=(fn)=>pt.list.forEach(q=>{const i=q*4,v=fn(i);d[i]=v[0];d[i+1]=v[1];d[i+2]=v[2];});
     let cand=null;
     if(tg[pt.f]){cand=[0,0,0];pt.list.forEach(q=>{const v=recol(q*4,pt.f);cand[0]+=v[0]/L;cand[1]+=v[1]/L;cand[2]+=v[2]/L;});
-      if(cr(cand,sur)>=target){paint(i=>recol(i,pt.f));return;}}
-    if(cr(orig,sur)>=target){paint(i=>[d0[i],d0[i+1],d0[i+2]]);return;}  // the original colour still reads well
+      paint(i=>recol(i,pt.f));if(cr(cand,sur)>=target)return;             // the chosen colour always shows
+      // too close to its surroundings: keep the chosen colour and draw a fine contrasting outline around it
+      const line=tune(sur,cand,2.6).map(Math.round),inP=new Set(pt.list),r1=new Set();
+      for(const q of pt.list){const x0=q%W;for(const o of [-1,1,-W,W]){const n=q+o;if(n<0||n>=N||(o===-1&&x0===0)||(o===1&&x0===W-1)||inP.has(n)||d[n*4+3]<60)continue;r1.add(n);}}
+      const r2=new Set();r1.forEach(q=>{const x0=q%W;for(const o of [-1,1,-W,W]){const n=q+o;if(n<0||n>=N||(o===-1&&x0===0)||(o===1&&x0===W-1)||inP.has(n)||r1.has(n)||d[n*4+3]<60)continue;r2.add(n);}});
+      r1.forEach(q=>{const i=q*4;d[i]=line[0];d[i+1]=line[1];d[i+2]=line[2];});
+      r2.forEach(q=>{const i=q*4;for(let k=0;k<3;k++)d[i+k]=Math.round(d[i+k]*.5+line[k]*.5);});
+      return;}
+    else if(cr(orig,sur)>=target){paint(i=>[d0[i],d0[i+1],d0[i+2]]);return;} // untouched part that still reads well
     const base=cand||orig,fixed=tune(base,sur,Math.max(target,2.6)),k=fixed.map((v,j)=>v-base[j]);
     paint(i=>{const v=cand?recol(i,pt.f):[d0[i],d0[i+1],d0[i+2]];return v.map((c,j)=>Math.max(0,Math.min(255,c+k[j])));});});
   // 4) soften anti-aliased edges next to recoloured areas
@@ -535,9 +543,9 @@ const design=()=>({color:st.color,slots:st.slots.map(k=>k||'-').join('|'),pats:s
 const HERO=[
  {c:'rot',s:PRESET.red.s,p:['orig','orig','orig','orig','orig','orig'],t:'公式レッド'},
  {c:'nacht',s:PRESET.navy.s,p:['orig','orig','orig','orig','orig','orig'],t:'公式ネイビー'},
- {c:'babyrosa',s:['gingerbread','angel','snowman','santa','boots','pyramid_g'],p:['berry','pink','pink','pink','pink','red'],t:'ベビーピンク'},
- {c:'tanne',s:['cat','snowman','gnome','nutcracker','train','pyramid_r'],p:['white','yellow','red','white','yellow','yellow'],t:'フォレストグリーン'},
- {c:'zitrone',s:['santa','gingerbread','angel','reindeer','boots','pyramid_g'],p:['blue','honey','sky','white','blue','blue'],t:'レモン'}];
+ {c:'babyrosa',s:['gingerbread','angel','snowman','santa','boots','pyramid_g'],p:['pink','pink','pink','pink','pink','red'],t:'ベビーピンク'},
+ {c:'tanne',s:['cat','snowman','gnome','nutcracker','train','pyramid_r'],p:['wcat','yellow','red','white','yellow','yellow'],t:'フォレストグリーン'},
+ {c:'zitrone',s:['santa','gingerbread','angel','reindeer','boots','pyramid_g'],p:['blue','yellow','sky','white','blue','blue'],t:'レモン'}];
 let heroI=0,heroTimer=null,onLanding=true;
 function applyLook(h){st.color=h.c;st.slots=h.s.slice();st.pat=h.p.slice();compose();}
 function heroShow(i){heroI=i;const h=HERO[i];applyLook(h);const c=COLORS.find(c=>c.id===h.c);
@@ -553,7 +561,7 @@ function buildLanding(){
   const g=snapshots();
   $('#gallery').innerHTML=g.map(x=>{const c=COLORS.find(c=>c.id===x.h.c);return `<figure><img src="${x.src}" alt="${x.h.t}のマグの作例"><figcaption><i>${c.de}</i>${x.h.t}</figcaption></figure>`;}).join('');
   $('#vchips').innerHTML=COLORS.slice(0,36).map(c=>`<i style="background:${c.hex}"></i>`).join('');
-  $('#vfigs').innerHTML=['santa','angel','gingerbread','snowman','gnome'].map((k,i)=>`<img src="${variant(k,['orig','pink','berry','orig','yellow'][i]).thumb}" alt="">`).join('');
+  $('#vfigs').innerHTML=['santa','angel','gingerbread','snowman','gnome'].map((k,i)=>`<img src="${variant(k,['orig','pink','pink','orig','yellow'][i]).thumb}" alt="">`).join('');
   const vf=$('#vframe'),vx=vf.getContext('2d');const gr=vx.createLinearGradient(0,0,0,225);gr.addColorStop(0,'#1C2558');gr.addColorStop(1,'#4A3A3A');vx.fillStyle=gr;vx.fillRect(0,0,300,225);
   if(g[0]){const im=new Image();im.onload=()=>{vx.drawImage(im,90,62,120,120);drawFrame(vx,300,225,'arch');};im.src=g[0].src;}
   const text='東京クリスマスマーケット2026の「クリスマスマグカップメーカー」で、オリジナルのマグを作ろう';
