@@ -137,10 +137,12 @@
         <img id="upImg" alt="" hidden>
         <div class="dropzone" id="dropzone" hidden><label for="fileIn">写真を選ぶ<input type="file" id="fileIn" accept="image/*"></label></div>
         <div class="mugLayer" id="mugLayer"></div>
+        <canvas class="framec" id="handC"></canvas>
         <canvas class="framec" id="frameC"></canvas>
         <div class="camnote" id="camnote" hidden></div>
       </div>
       <div class="ctrl">
+        <div class="range holdrow" id="holdRow"><label>手で持つ <em>Halten</em></label><button class="ghost" id="holdBtn" aria-pressed="false">手で持つ</button><p class="note" id="holdNote" style="margin:6px 0 0"></p></div>
         <div class="range"><label for="rSize">マグの大きさ <em>Größe</em></label><input type="range" id="rSize" min="14" max="80" value="34"></div>
         <div class="range"><label for="rTurn">マグの向き（360°） <em>Drehen</em></label><input type="range" id="rTurn" min="-180" max="180" value="0"></div>
         <div class="range"><label for="rTilt">見る角度 <em>Neigung</em></label><input type="range" id="rTilt" min="-20" max="75" value="12"></div>

@@ -438,16 +438,18 @@ function step(s){
   else{stopCam();tilt=.12;attach($('#view'));}
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function placeLayer(){layer.style.left=lp.x+'%';layer.style.top=lp.y+'%';layer.style.width=lp.s+'%';resize();drawFrameLive();}
+function placeLayer(fast){layer.style.left=lp.x+'%';layer.style.top=lp.y+'%';layer.style.width=lp.s+'%';
+  layer.style.transform=`translate(-50%,-50%) rotate(${lp.rot||0}rad)`;resize();if(!fast)drawFrameLive();}
 document.querySelectorAll('.ptabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.ptabs button').forEach(x=>x.setAttribute('aria-selected',x===b));setBg(b.dataset.bg);});
 function setBg(m){
   bgMode=m;document.querySelectorAll('.ptabs button').forEach(x=>x.setAttribute('aria-selected',x.dataset.bg===m));stopCam();cam.hidden=m!=='camera';upImg.hidden=m!=='upload'||!upImg.src;
   $('#dropzone').hidden=!(m==='upload'&&!upImg.getAttribute('src'));$('#camnote').hidden=true;
   lp={x:50,y:62,s:window.innerWidth<700?56:36};fitScene();
+  $('#holdRow').hidden=m!=='camera';if(m!=='camera')setHold(false);
   $('#rSize').value=lp.s;placeLayer();if(m==='camera')startCam();
 }
 async function startCam(){
-  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});cam.srcObject=stream;await cam.play();}
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});cam.srcObject=stream;await cam.play();if(holdOn)holdLoop();}
   catch(err){const n=$('#camnote');n.hidden=false;
     n.innerHTML='カメラを起動できませんでした。ブラウザの設定でカメラの利用を許可してください。カメラがない場合はこちらから選べます。<span class="camalt"><button data-go="upload">写真に合わせる</button></span>';
     n.querySelectorAll('button').forEach(b=>b.onclick=()=>setBg(b.dataset.go));}
@@ -473,7 +475,7 @@ let turn0=0;$('#rTurn').addEventListener('input',e=>{rotY=-2*Math.PI*0.72+(+e.ta
   const skip=t=>t.closest&&t.closest('label,input,button,.camnote,.dropzone');
   // mouse / pen
   let m=null;
-  scene2.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||skip(e.target))return;m={x:e.clientX,y:e.clientY,ox:lp.x,oy:lp.y};scene2.setPointerCapture(e.pointerId);scene2.classList.add('grabbing');});
+  scene2.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'||skip(e.target)||holding())return;m={x:e.clientX,y:e.clientY,ox:lp.x,oy:lp.y};scene2.setPointerCapture(e.pointerId);scene2.classList.add('grabbing');});
   scene2.addEventListener('pointermove',e=>{if(!m||e.pointerType==='touch')return;const R=r();lp.x=m.ox+(e.clientX-m.x)/R.width*100;lp.y=m.oy+(e.clientY-m.y)/R.height*100;clampPos();placeLayer();});
   const mu=()=>{m=null;scene2.classList.remove('grabbing');};scene2.addEventListener('pointerup',mu);scene2.addEventListener('pointercancel',mu);
   scene2.addEventListener('wheel',e=>{if(skip(e.target))return;e.preventDefault();lp.s=Math.max(14,Math.min(80,lp.s*(e.deltaY<0?1.06:1/1.06)));$('#rSize').value=lp.s;placeLayer();},{passive:false});
@@ -482,7 +484,7 @@ let turn0=0;$('#rTurn').addEventListener('input',e=>{rotY=-2*Math.PI*0.72+(+e.ta
   const two=(a,b)=>({x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2,d:Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY),ang:Math.atan2(b.clientY-a.clientY,b.clientX-a.clientX)});
   const begin=e=>{const T=e.touches;if(T.length===1)t={n:1,x:T[0].clientX,y:T[0].clientY,ox:lp.x,oy:lp.y};
     else if(T.length>=2){const q=two(T[0],T[1]);t={n:2,x:q.x,y:q.y,d:q.d,ang:q.ang,ox:lp.x,oy:lp.y,os:lp.s,ry:rotY};}};
-  scene2.addEventListener('touchstart',e=>{if(skip(e.target))return;e.preventDefault();begin(e);},{passive:false});
+  scene2.addEventListener('touchstart',e=>{if(skip(e.target))return;e.preventDefault();if(holding())return;begin(e);},{passive:false});
   scene2.addEventListener('touchmove',e=>{if(!t)return;e.preventDefault();const R=r(),T=e.touches;
     if(t.n===1&&T.length===1){lp.x=t.ox+(T[0].clientX-t.x)/R.width*100;lp.y=t.oy+(T[0].clientY-t.y)/R.height*100;}
     else if(t.n===2&&T.length>=2){const q=two(T[0],T[1]);lp.x=t.ox+(q.x-t.x)/R.width*100;lp.y=t.oy+(q.y-t.y)/R.height*100;
@@ -492,6 +494,65 @@ let turn0=0;$('#rTurn').addEventListener('input',e=>{rotY=-2*Math.PI*0.72+(+e.ta
   const tend=e=>{if(!t)return;if(e.touches.length)begin(e);else t=null;};
   scene2.addEventListener('touchend',tend);scene2.addEventListener('touchcancel',tend);
 })();
+
+/* ---- ARフォト「手で持つ」: track the hand in the camera image (MediaPipe Hand Landmarker) and hang the mug's handle in it ---- */
+const handC=$('#handC'),MP='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14',
+  HAND_MODELS=['assets/hand_landmarker.task','https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task'];
+let lastRun=0,seen=false,holdOn=false,hl=null,hlLoading=null,lastVT=-1,miss=0,hs=null,side=1,sideVote=0,looping=false;
+const holding=()=>holdOn&&bgMode==='camera';
+async function loadHands(){if(hl)return hl;if(hlLoading)return hlLoading;
+  hlLoading=(async()=>{const v=await import(MP+'/vision_bundle.mjs');const fs=await v.FilesetResolver.forVisionTasks(MP+'/wasm');
+    for(const model of HAND_MODELS)for(const dl of ['GPU','CPU']){try{return hl=await v.HandLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:model,delegate:dl},
+      runningMode:'VIDEO',numHands:1,minHandDetectionConfidence:.5,minHandPresenceConfidence:.5,minTrackingConfidence:.5});}catch(e){}}
+    throw new Error('hand model');})();
+  try{return await hlLoading;}finally{hlLoading=null;}}
+function holdNote(t){$('#holdNote').textContent=t;}
+async function setHold(on){
+  holdOn=on;const b=$('#holdBtn');b.setAttribute('aria-pressed',on);b.textContent=on?'手で持つをやめる':'手で持つ';
+  if(!on){lp.rot=0;hs=null;shadow.visible=!$('#photo').hidden;handC.getContext('2d').clearRect(0,0,handC.width,handC.height);
+    if(!$('#photo').hidden){lp={x:50,y:62,s:window.innerWidth<700?56:36};$('#rSize').value=lp.s;targetY=-2*Math.PI*0.72;placeLayer();}
+    holdNote('');return;}
+  shadow.visible=false;seen=false;holdNote('準備しています…');
+  try{await loadHands();}catch(e){holdNote('手の認識を読み込めませんでした。通信状況をご確認ください。');return setHold(false);}
+  if(!holdOn)return;holdNote('マグの持ち手を握るように、カメラに手をかざしてください。');holdLoop();
+}
+function holdLoop(){if(looping)return;looping=true;
+  const step=()=>{if(!holding()||!stream){looping=false;return;}requestAnimationFrame(step);
+    const now=performance.now();if(!hl||cam.readyState<2||cam.currentTime===lastVT||now-lastRun<45)return;lastVT=cam.currentTime;lastRun=now;
+    let res;try{res=hl.detectForVideo(cam,performance.now());}catch(e){return;}
+    const L=res&&res.landmarks&&res.landmarks[0];
+    if(!L){if(++miss===10){handC.getContext('2d').clearRect(0,0,handC.width,handC.height);holdNote('手が見つかりません。手全体がカメラに映るようにしてください。');}return;}
+    if(miss>=10||!seen){seen=true;holdNote('持てました。手を動かすとマグもついてきます。');}miss=0;applyHand(L);};
+  requestAnimationFrame(step);}
+const _v=new THREE.Vector3();
+function proj(x,y,z){_v.set(x,y,z).applyMatrix4(mug.matrixWorld).project(camera);return {x:_v.x*.5,y:-_v.y*.5};} // offset from layer centre, in layer widths
+function applyHand(L){
+  const R=scene2.getBoundingClientRect(),W=R.width,H=R.height,vw=cam.videoWidth,vh=cam.videoHeight;if(!vw||!W)return;
+  const s=Math.max(W/vw,H/vh),ox=(W-vw*s)/2,oy=(H-vh*s)/2,P=i=>({x:ox+L[i].x*vw*s,y:oy+L[i].y*vh*s});
+  const avg=ids=>{let x=0,y=0;ids.forEach(i=>{const q=P(i);x+=q.x;y+=q.y;});return {x:x/ids.length,y:y/ids.length};};
+  const mcp=avg([5,9,13,17]),pip=avg([6,10,14,18]),a=P(5),b=P(17),span=Math.max(8,Math.hypot(a.x-b.x,a.y-b.y));
+  let kx=a.x-b.x,ky=a.y-b.y;if(ky>0){kx=-kx;ky=-ky;}const kl=Math.hypot(kx,ky)||1,ux=kx/kl,uy=ky/kl;   // "up" along the knuckles = up of the mug
+  const rot=Math.max(-.9,Math.min(.9,Math.atan2(ux,-uy)));
+  const sd=((pip.x-mcp.x)*(-uy)+(pip.y-mcp.y)*ux)<0?-1:1;   // the fingers curl toward the side where the cup is
+  if(sd!==side){if(++sideVote>6){side=sd;sideVote=0;}}else sideVote=0;
+  const g={x:(mcp.x*.45+pip.x*.55),y:(mcp.y*.45+pip.y*.55),span,rot};
+  hs=hs?{x:hs.x+(g.x-hs.x)*.5,y:hs.y+(g.y-hs.y)*.5,span:hs.span+(g.span-hs.span)*.35,rot:hs.rot+(g.rot-hs.rot)*.4}:g;
+  targetY=side>0?-Math.PI/2:Math.PI/2;   // handle toward the hand, the cup on the other side
+  mug.updateMatrixWorld();
+  const y0=FH,top=proj(0,y0+BH*.74,1.62),bot=proj(0,y0+BH*.30,1.62),mid=proj(0,y0+BH*.52,1.62);
+  const per=Math.max(.02,Math.hypot(top.x-bot.x,top.y-bot.y));            // handle opening height per layer width
+  const lw=Math.max(60,Math.min(W*2.2,.92*hs.span/per));
+  const c=Math.cos(hs.rot),sn=Math.sin(hs.rot),dx=mid.x*lw,dy=mid.y*lw;
+  const cx=hs.x-(dx*c-dy*sn),cy=hs.y-(dx*sn+dy*c);
+  lp.x=cx/W*100;lp.y=cy/H*100;lp.s=lw/W*100;lp.rot=hs.rot;$('#rSize').value=Math.min(80,lp.s);placeLayer(true);
+  // fingers in front of the handle: cut them out of the camera picture and lay them over the mug
+  const d=handC.width/W,x=handC.getContext('2d');x.clearRect(0,0,handC.width,handC.height);x.save();x.scale(d,d);
+  x.lineCap='round';x.lineJoin='round';x.strokeStyle='#000';
+  [[[1,2,3,4],.3],[[5,6,7,8],.3],[[9,10,11,12],.3],[[13,14,15,16],.28],[[17,18,19,20],.25]].forEach(([ch,wd])=>{x.lineWidth=span*wd;x.beginPath();
+    ch.forEach((i,j)=>{const q=P(i);j?x.lineTo(q.x,q.y):x.moveTo(q.x,q.y);});x.stroke();});
+  x.globalCompositeOperation='source-in';x.drawImage(cam,ox,oy,vw*s,vh*s);x.restore();
+}
+$('#holdBtn').onclick=()=>setHold(!holdOn);
 /* ---- photo frame built from the mug's own artwork: gold pillars, arches, hanging stars, snow and the logo ---- */
 let frameStyle='arch';
 const PC={pillar:[728,100,112,800],arch:[835,180,528,208],dots:[452,30,30,300],star:[380,328,176,177],flake:[1205,345,120,120],
@@ -557,7 +618,7 @@ function drawFrame(x,W,H,style){
 }
 const frameC=$('#frameC');
 function drawFrameLive(){const r=scene2.getBoundingClientRect();if(!r.width||!LAY)return;const d=Math.min(2,window.devicePixelRatio||1);
-  frameC.width=Math.round(r.width*d);frameC.height=Math.round(r.height*d);const x=frameC.getContext('2d');x.clearRect(0,0,frameC.width,frameC.height);
+  frameC.width=Math.round(r.width*d);frameC.height=Math.round(r.height*d);if(handC.width!==frameC.width||handC.height!==frameC.height){handC.width=frameC.width;handC.height=frameC.height;}const x=frameC.getContext('2d');x.clearRect(0,0,frameC.width,frameC.height);
   if(frameStyle!=='none')drawFrame(x,frameC.width,frameC.height,frameStyle);}
 document.querySelectorAll('#frames button').forEach(b=>b.onclick=()=>{frameStyle=b.dataset.f;document.querySelectorAll('#frames button').forEach(x=>x.setAttribute('aria-pressed',x===b));drawFrameLive();});
 window.addEventListener('resize',()=>{if(!$('#photo').hidden)drawFrameLive();});
@@ -568,8 +629,9 @@ $('#shoot').onclick=()=>{
   x.fillStyle='#14182F';x.fillRect(0,0,W,H);
   if(bgMode==='camera'&&stream)cover(x,cam,cam.videoWidth,cam.videoHeight,W,H);
   else if(bgMode==='upload'&&upImg.getAttribute('src'))cover(x,upImg,upImg.naturalWidth,upImg.naturalHeight,W,H);
-  renderer.render(scene,camera);const lr=layer.getBoundingClientRect();
-  x.drawImage(renderer.domElement,(lr.left-r.left)*k,(lr.top-r.top)*k,lr.width*k,lr.height*k);
+  renderer.render(scene,camera);const lw=layer.offsetWidth;
+  x.save();x.translate(lp.x/100*r.width*k,lp.y/100*r.height*k);x.rotate(lp.rot||0);x.drawImage(renderer.domElement,-lw*k/2,-lw*k/2,lw*k,lw*k);x.restore();
+  if(holdOn&&bgMode==='camera')x.drawImage(handC,0,0,W,H);   // the fingers in front of the handle
   if(frameStyle!=='none')drawFrame(x,W,H,frameStyle);
   else{x.fillStyle='rgba(243,232,210,.92)';x.font=`italic 500 ${Math.round(W*.022)}px "EB Garamond", serif`;x.textAlign='right';
   x.shadowColor='rgba(0,0,0,.45)';x.shadowBlur=8;x.fillText('Tokyo Christmas Market 2026',W-W*.025,H-W*.048);
