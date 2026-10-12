@@ -216,7 +216,7 @@ function compose(){
   outlinedNow=new Set();
   st.slots.forEach((k,i)=>{
     if(!k)return;const m=A.chars[k],[mw,mh]=SLOT_MAX[i];
-    const s=Math.min(1,mw/m.w,mh/m.h),w=m.w*s,h=m.h*s,cx=A.slots[i],g=ground(cx);
+    const {s,cx}=fitSlot(k,i,Math.min(1,mw/m.w,mh/m.h)),w=m.w*s,h=m.h*s,g=ground(cx);
     const bottom=g+m.sink*s,x=cx-w/2,y=bottom-h;
     if(FLOAT[k]){ // soft shadow on the snow, as on the original angel
       const sg=wx.createRadialGradient(cx,g+38,4,cx,g+38,w*.34);sg.addColorStop(0,'rgba(60,40,50,.22)');sg.addColorStop(1,'rgba(60,40,50,0)');
@@ -231,6 +231,33 @@ function compose(){
   fx.fillStyle=hex;fx.fillRect(0,0,2048,241);fx.drawImage(look.decor?tinted(FOOT,look.decor,'f'):FOOT,0,(241-168)/2,2048,168);
   if(tex){tex.body.needsUpdate=true;tex.foot.needsUpdate=true;mats.glaze.color.set(hex).convertSRGBToLinear();}
 }
+/* keep figures off the "Tokyo Christmas Market 2026" lettering: shrink and/or nudge sideways until no word is touched */
+const LOGO_BOX=[2850,420,3440,990],CELL=8,LOGO_PAD=18;let logoGrid=null;
+function getLogoGrid(){ // occupancy grid of the gold lettering (from the gold layer), grown by LOGO_PAD
+  if(logoGrid)return logoGrid;const [L,T,R,Bt]=LOGO_BOX,W=R-L,H=Bt-T,c=document.createElement('canvas');c.width=W;c.height=H;
+  const x=c.getContext('2d');x.drawImage(LAY.gold,-L,-T);const d=x.getImageData(0,0,W,H).data,gw=Math.ceil(W/CELL),gh=Math.ceil(H/CELL),g=new Uint8Array(gw*gh);
+  for(let y=0;y<H;y++)for(let xx=0;xx<W;xx++)if(d[(y*W+xx)*4+3]>80)g[Math.floor(y/CELL)*gw+Math.floor(xx/CELL)]=1;
+  const r=Math.ceil(LOGO_PAD/CELL),o=new Uint8Array(gw*gh);
+  for(let j=0;j<gh;j++)for(let i=0;i<gw;i++)if(g[j*gw+i])for(let dj=-r;dj<=r;dj++)for(let di=-r;di<=r;di++){const a=i+di,b=j+dj;if(a>=0&&b>=0&&a<gw&&b<gh)o[b*gw+a]=1;}
+  return logoGrid={g:o,gw,gh};}
+const profCache={};
+function profile(k){ // left/right edge of the figure for each of 48 horizontal bands (0..1 of the image)
+  if(profCache[k])return profCache[k];const im=variant(k,'orig').img,W=im.width,H=im.height;
+  const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.drawImage(im,0,0);const d=x.getImageData(0,0,W,H).data;
+  const B=48,pr=[];for(let b=0;b<B;b++){let l=W,r=-1;for(let y=Math.floor(b*H/B);y<Math.floor((b+1)*H/B);y++)for(let xx=0;xx<W;xx++)if(d[(y*W+xx)*4+3]>60){if(xx<l)l=xx;if(xx>r)r=xx;}
+    pr.push(r<0?null:[l/W,(r+1)/W]);}
+  return profCache[k]=pr;}
+function hitsLogo(k,s,cx){const m=A.chars[k],w=m.w*s,h=m.h*s,bottom=ground(cx)+m.sink*s,x0=cx-w/2,y0=bottom-h,pr=profile(k),B=pr.length;
+  for(let b=0;b<B;b++){const e=pr[b];if(!e)continue;const ya=y0+b*h/B,yb=y0+(b+1)*h/B,xa=x0+e[0]*w,xb=x0+e[1]*w;
+    const [L,T,R,Bt]=LOGO_BOX;if(xb<L||xa>R||yb<T||ya>Bt)continue;const {g,gw,gh}=getLogoGrid();
+    const i0=Math.max(0,Math.floor((xa-L)/CELL)),i1=Math.min(gw-1,Math.floor((xb-L)/CELL)),j0=Math.max(0,Math.floor((ya-T)/CELL)),j1=Math.min(gh-1,Math.floor((yb-T)/CELL));
+    for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++)if(g[j*gw+i])return true;}
+  return false;}
+const fitMemo={};
+function fitSlot(k,i,s0){const key=k+'|'+i;if(fitMemo[key])return fitMemo[key];const c0=A.slots[i];
+  const shifts=[0,-20,20,-40,40,-60,60,-80,80,-100,100,-120,120];
+  for(let s=s0;s>=s0*.4;s*=.95)for(const dx of shifts){if(!hitsLogo(k,s,c0+dx))return fitMemo[key]={s,cx:c0+dx};}
+  return fitMemo[key]={s:s0*.4,cx:c0};}
 function drift(cx,bottom,w,edge){ // small mound of snow in front of the feet
   const hw=Math.max(70,w*.46),top=bottom-26;
   wx.save();wx.fillStyle='#FFFFFF';wx.shadowColor=edge?'rgba(70,50,60,.3)':'rgba(255,255,255,.9)';wx.shadowBlur=edge?12:10;if(edge)wx.shadowOffsetY=-3;
