@@ -106,6 +106,11 @@ function glazeLook(hex){ // how decorations adapt so they stay visible on this g
           snowEdge:white<1.9,                                   // faint edge on the snow
           outline:white<2.3?mix(hex,'#2B1F2E',.42):'#F4F1EA'};  // figure rim colour
 }
+/* the front lettering must stay readable on every glaze: keep the gold where it already reads (about as well as on the official red),
+   otherwise deepen it toward bronze on pale glazes or lift it toward champagne on dark ones */
+function logoInk(hex){const g='#D1A46B';if(ratio(g,hex)>=3)return null;
+  let best=null,bc=0;for(const to of ['#3A2408','#FFF4DA'])for(let t=.1;t<=1.001;t+=.05){const c=mix(g,to,t),r=ratio(c,hex);if(r>bc){bc=r;best=c;}if(r>=3.2)return c;}
+  return best;}
 const VAR={};
 function variant(k,p){ // recoloured figure (+ pixel sample + thumbnail), cached
   const key=k+'|'+p;if(VAR[key])return VAR[key];
@@ -231,6 +236,8 @@ function compose(){
   const look=glazeLook(hex);
   wx.fillStyle=hex;wx.fillRect(0,0,WW,WH);
   wx.drawImage(look.gold?tinted(LAY.gold,look.gold,'g'):LAY.gold,0,0);
+  const ink=(st.color==='rot'||st.color==='nacht')?null:logoInk(hex);   // official mugs stay exactly as designed
+  if(ink){const [L,T,R,B]=LOGO_BOX;wx.save();wx.beginPath();wx.rect(L,T,R-L,B-T);wx.clip();wx.drawImage(tinted(LAY.gold,ink,'logo'),0,0);wx.restore();}
   wx.drawImage(look.decor?tinted(LAY.decor,look.decor,'w'):LAY.decor,0,0);
   if(look.snowEdge){wx.save();wx.shadowColor='rgba(70,50,60,.32)';wx.shadowBlur=14;wx.shadowOffsetY=-3;wx.drawImage(LAY.snow,0,0);wx.restore();}
   wx.drawImage(LAY.snow,0,0);
