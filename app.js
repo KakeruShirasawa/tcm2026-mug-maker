@@ -525,7 +525,7 @@ async function setHold(on){
   try{await loadHands();}catch(e){holdNote('手の認識を読み込めませんでした。通信状況をご確認ください。');return setHold(false);}
   if(!holdOn)return;holdNote('マグの持ち手を握るように、カメラに手をかざしてください。');holdLoop();
 }
-let HT=null,HC=null,HV=null,LT=null,LC=null,lastF=0;   // hand targets (from the detector) and the smoothed values drawn every frame
+let hp=0,HT=null,HC=null,HV=null,LT=null,LC=null,lastF=0;   // hand targets (from the detector) and the smoothed values drawn every frame
 function holdLoop(){if(looping)return;looping=true;
   const step=()=>{if(!holding()||!stream){looping=false;return;}requestAnimationFrame(step);
     const now=performance.now();
@@ -551,11 +551,12 @@ function applyHand(L){   // detector result → targets only (drawing happens in
   const avg=ids=>{let x=0,y=0;ids.forEach(i=>{x+=P[i].x;y+=P[i].y;});return {x:x/ids.length,y:y/ids.length};};
   const mcp=avg([5,9,13,17]),pip=avg([6,10,14,18]),a=P[5],b=P[17],span=Math.max(8,Math.hypot(a.x-b.x,a.y-b.y));
   let kx=a.x-b.x,ky=a.y-b.y;if(ky>0){kx=-kx;ky=-ky;}const kl=Math.hypot(kx,ky)||1,ux=kx/kl,uy=ky/kl;   // "up" along the knuckles = up of the mug
-  const rot=Math.max(-.9,Math.min(.9,Math.atan2(ux,-uy)));
-  const sd=((pip.x-mcp.x)*(-uy)+(pip.y-mcp.y)*ux)<0?-1:1;   // the fingers curl toward the side where the cup is
+  const rot=Math.max(-.45,Math.min(.45,Math.atan2(ux,-uy)));   // a held mug stays mostly upright
+  const palm=avg([0,0,5,9,13,17]),gx=mcp.x*.45+pip.x*.55,gy=mcp.y*.45+pip.y*.55;
+  const sd=((gx-palm.x)*(-uy)+(gy-palm.y)*ux)<0?-1:1;   // the cup sits on the far side of the fingers, away from the palm
   if(sd!==side){if(++sideVote>6){side=sd;sideVote=0;}}else sideVote=0;
   targetY=side>0?-Math.PI/2:Math.PI/2;   // handle toward the hand, the cup on the other side
-  const nx=mcp.x*.45+pip.x*.55,ny=mcp.y*.45+pip.y*.55;
+  const nx=gx,ny=gy;
   // tiny wobble filter only (big moves pass straight through, so the mug stays on the hand)
   const f=(o,v,j)=>o===undefined?v:(Math.abs(v-o)>j?v:o+(v-o)*.55);
   HC={x:f(HC&&HC.x,nx,6),y:f(HC&&HC.y,ny,6),span:f(HC&&HC.span,span,4),rot:f(HC&&HC.rot,rot,.08)};HT=HC;
@@ -570,14 +571,23 @@ function holdRender(){
   mug.updateMatrixWorld();
   const y0=FH,top=proj(0,y0+BH*.74,1.62),bot=proj(0,y0+BH*.30,1.62),mid=proj(0,y0+BH*.52,1.62);
   const per=Math.max(.02,Math.hypot(top.x-bot.x,top.y-bot.y));            // handle opening height per layer width
-  const lw=Math.max(60,Math.min(m.W*1.8,.92*HC.span/per)),sc=lw/base;
+  const lw=Math.max(60,Math.min(m.W*1.8,.82*HC.span/per)),sc=lw/base;
   const c=Math.cos(HC.rot),sn=Math.sin(HC.rot),dx=mid.x*lw,dy=mid.y*lw;
-  const cx=HC.x-(dx*c-dy*sn),cy=HC.y-(dx*sn+dy*c);
+  let cx=HC.x-(dx*c-dy*sn),cy=HC.y-(dx*sn+dy*c);
+  // keep the cup's body out of the hand: if any part of the hand reaches past the body's near edge, slide the mug outward
+  if(LC){const ax=side*c,ay=side*sn,ux=sn,uy=-c;                      // across (toward the body) and up, on screen
+    const lc=v=>{const X=v.x*c-v.y*sn,Y=v.x*sn+v.y*c;return {x:X*lw,y:Y*lw};};
+    const pe=lc(proj(0,y0+BH*.52,1.0)),pm=lc(mid),pT=lc(proj(0,y0+BH,0)),pB=lc(proj(0,0,0));
+    const near=(pe.x-pm.x)*ax+(pe.y-pm.y)*ay,sT=(pT.x-pm.x)*ux+(pT.y-pm.y)*uy,sB=(pB.x-pm.x)*ux+(pB.y-pm.y)*uy;
+    let push=0;LC.forEach((q,i)=>{if(i===0)return;const t=(q.x-HC.x)*ax+(q.y-HC.y)*ay,u=(q.x-HC.x)*ux+(q.y-HC.y)*uy;
+      if(u<Math.max(sT,sB)&&u>Math.min(sT,sB))push=Math.max(push,t-near+HC.span*.12);});
+    push=Math.min(push,HC.span*.9);hp=hp+(push-hp)*.5;cx+=ax*hp;cy+=ay*hp;}
   lp.x=cx/m.W*100;lp.y=cy/m.H*100;lp.s=base/m.W*100;lp.rot=HC.rot;lp.sc=sc;
   layer.style.left=lp.x+'%';layer.style.top=lp.y+'%';layer.style.transform=`translate(-50%,-50%) rotate(${HC.rot}rad) scale(${sc})`;
   // fingers in front of the handle: cut them out of the live camera picture and lay them over the mug
   if(!LC)return;const d=handC.width/m.W,x=handC.getContext('2d');x.clearRect(0,0,handC.width,handC.height);x.save();x.scale(d,d);
-  x.lineCap='round';x.lineJoin='round';x.strokeStyle='#000';
+  x.lineCap='round';x.lineJoin='round';x.strokeStyle='#000';x.fillStyle='#000';
+  x.beginPath();[0,1,2,5,9,13,17].forEach((i,j)=>{const q=LC[i];j?x.lineTo(q.x,q.y):x.moveTo(q.x,q.y);});x.closePath();x.fill();x.lineWidth=HC.span*.25;x.stroke();   // palm
   [[[1,2,3,4],.3],[[5,6,7,8],.3],[[9,10,11,12],.3],[[13,14,15,16],.28],[[17,18,19,20],.25]].forEach(([ch,wd])=>{x.lineWidth=HC.span*wd;x.beginPath();
     ch.forEach((i,j)=>{const q=LC[i];j?x.lineTo(q.x,q.y):x.moveTo(q.x,q.y);});x.stroke();});
   x.globalCompositeOperation='source-in';if(mirror){x.translate(m.W,0);x.scale(-1,1);}x.drawImage(camC,m.ox,m.oy,m.vw*m.s,m.vh*m.s);x.restore();
